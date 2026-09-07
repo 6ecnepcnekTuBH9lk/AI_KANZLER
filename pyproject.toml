@@ -1,0 +1,16 @@
+[project]
+name = "kanzler-business-platform"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = ["fastapi", "sqlalchemy>=2,<3", "alembic", "pydantic>=2,<3", "httpx", "beautifulsoup4", "lxml", "openpyxl", "python-multipart", "uvicorn"]
+
+[tool.pytest.ini_options]
+pythonpath = ["backend"]
+testpaths = ["backend/tests"]
+markers = ["real: read-only validation against user-provided workbooks", "network: live Alta integration"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 110
+exclude = [".venv", "backend/app/resources", "frontend", "docs/source-review"]
+

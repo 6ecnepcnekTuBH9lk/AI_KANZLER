@@ -1,0 +1,15 @@
+interface:
+  display_name: tnved code filler
+  short_description: Автоматически определяет коды ТН ВЭД ЕАЭС для товаров из Excel
+    по их наименованию и характеристикам, используя данные сайта Alta.ru. Заполняет
+    колонку «Код ТНВЭД», сохраняет исходную структуру и оформление файла, а для товаров,
+    которые невозможно классифицировать однозначно, добавляет комментарий с причиной.
+  icon_small: assets/icon.svg
+  icon_large: assets/icon.svg
+policy:
+  products:
+  - chatgpt
+  - codex
+  - api
+  - atlas
+  allow_implicit_invocation: true

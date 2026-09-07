@@ -1,0 +1,172 @@
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  color: #172b4d;
+  background: #f3f5f7;
+}
+.app-shell {
+  min-height: 100vh;
+}
+.sidebar {
+  border-right: 1px solid #dce2e8;
+  position: relative;
+}
+.brand {
+  font-family: Georgia, serif;
+  font-size: 27px;
+  letter-spacing: 2px;
+  padding: 25px 22px 30px;
+  color: #182f46;
+}
+.brand span {
+  display: block;
+  font:
+    10px "Segoe UI",
+    sans-serif;
+  letter-spacing: 1.8px;
+  margin-top: 7px;
+}
+.sidebar .ant-menu {
+  border: 0;
+}
+.sidebar .ant-menu-item {
+  height: 43px;
+  line-height: 43px;
+  margin: 4px 10px;
+  width: calc(100% - 20px);
+  font-size: 12px;
+  padding-left: 12px !important;
+}
+.sidebar-footer {
+  position: sticky;
+  top: 90vh;
+  padding: 30px 22px;
+  color: #6f7e8c;
+  font-size: 12px;
+}
+.sidebar-footer span {
+  font-size: 11px;
+}
+.topbar {
+  height: 54px;
+  line-height: 54px;
+  background: white;
+  border-bottom: 1px solid #e1e6eb;
+  display: flex;
+  justify-content: space-between;
+  padding: 0 26px;
+}
+.content {
+  padding: 24px;
+  min-width: 0;
+}
+.page-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+.page-title h3 {
+  margin: 0 0 4px !important;
+}
+.module-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+.module-grid p {
+  min-height: 55px;
+  line-height: 1.7;
+}
+.ant-card {
+  margin-bottom: 18px;
+  box-shadow: none;
+}
+.ant-card-head-title {
+  white-space: normal !important;
+}
+.muted {
+  color: #687787;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.upload-row {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+.upload-row > div:first-child {
+  flex: 1;
+}
+.upload-row p {
+  margin-bottom: 0;
+}
+.upload-row .ant-upload-wrapper {
+  max-width: 340px;
+}
+.upload-panel .ant-checkbox-wrapper {
+  margin-top: 12px;
+}
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(140px, 1fr));
+  gap: 12px;
+}
+.kpi-grid .ant-card {
+  margin-bottom: 4px;
+}
+.kpi-grid {
+  margin-bottom: 18px;
+}
+.kpi-grid .ant-statistic-content {
+  font-size: 24px;
+}
+.table-tools {
+  margin-bottom: 16px;
+}
+.results-card .ant-card-body {
+  padding: 16px;
+}
+.run-status .ant-card-body {
+  padding: 12px 16px;
+}
+.ant-alert {
+  margin-bottom: 16px;
+}
+.ant-table-cell {
+  font-variant-numeric: tabular-nums;
+}
+.ant-table-cell span[title] {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.chart {
+  margin: 14px 0 24px;
+}
+.clarification {
+  margin-top: 14px;
+}
+.ant-tabs-nav {
+  margin-bottom: 18px !important;
+}
+@media (max-width: 1100px) {
+  .content {
+    padding: 16px;
+  }
+  .upload-row {
+    flex-wrap: wrap;
+  }
+  .upload-row > div:first-child {
+    flex-basis: 100%;
+  }
+  .module-grid {
+    grid-template-columns: 1fr;
+  }
+  .kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

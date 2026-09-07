@@ -1,0 +1,17 @@
+interface:
+  display_name: KANZLER Merchandise Performance Controller
+  short_description: Еженедельный анализ продаж текущей коллекции KANZLER на уровне
+    артикулов. Сопоставляет поартикульный и категорийный план с фактическими продажами,
+    учитывает историческую сезонность, остатки, размеры, распределение, цены и вторые
+    поставки. Присваивает статус товара, выявляет причины отклонений, строит прогноз
+    и формирует конкретные рекомендации по подсортировке, распределению, каналам,
+    цене и управлению второй волной поставки.
+  icon_small: assets/icon.svg
+  icon_large: assets/icon.svg
+policy:
+  products:
+  - chatgpt
+  - codex
+  - api
+  - atlas
+  allow_implicit_invocation: true
