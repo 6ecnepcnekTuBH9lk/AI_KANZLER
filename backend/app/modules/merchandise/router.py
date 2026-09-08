@@ -91,6 +91,9 @@ def section(
         "second-wave",
         "actions",
         "data-quality",
+        "monthly-plan",
+        "history",
+        "methodology",
     ):
         raise HTTPException(404, "Раздел не найден.")
     return rows_response(

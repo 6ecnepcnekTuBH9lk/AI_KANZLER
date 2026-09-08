@@ -1,5 +1,22 @@
 # Проверки проекта
 
+## Коммерческая доработка после Skill — 08.09.2026
+
+`pytest -q`: **255 passed**. Ruff check и format --check прошли. Frontend: **12 passed**;
+lint, typecheck и build прошли. Новые тесты фиксируют независимость трёх оценок, сезонное наблюдение,
+размерные сигналы и подтверждения, запрет ранней цены, known sums / comparable subsets, неполный предсезон,
+даты пересмотра и ROUND_HALF_UP. Golden 338 строк включает raw и display; арифметический baseline
+до доработки сохранён отдельно и не перебазируется при обновлении ожидаемых статусов.
+
+Приёмка после тестов: `python -X utf8 scripts/smoke_merchandise.py` (локальный backend на 8001),
+`python -X utf8 scripts/verify_merchandise_delivery.py`, `python -X utf8 scripts/compare_merchandise_followup.py`.
+Verifier использует только изолированную БД `test-results/merchandise-followup/server` и добавляет туда
+явно обозначенную копию прежнего результата для проверки совместимости. Рабочая БД пользователя не меняется.
+
+Проверены 41 453 ячейки XLSX, все сохранённые API/SQLite-разделы, исходные SHA, прежний экспорт,
+живые сводка/карточка/история. Визуально проверены 11 листов; даты дополнительно проверены по типу и Excel-формату.
+Полный протокол: [MERCHANDISE_FOLLOWUP_REPORT.md](MERCHANDISE_FOLLOWUP_REPORT.md).
+
 ## Точечная доработка ТН ВЭД: TENCEL и Excel — 08.09.2026
 
 Полный `pytest -q`: **229 passed**, 109,09 с (5 предупреждений существующих зависимостей).

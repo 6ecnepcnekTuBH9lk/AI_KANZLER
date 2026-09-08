@@ -10,7 +10,7 @@ from datetime import date, datetime, timedelta
 from statistics import mean
 
 import pytest
-from app.modules.merchandise import importers, reporting
+from app.modules.merchandise import importers, presentation, reporting
 from app.modules.merchandise.service import run
 from app.shared.excel import norm
 from openpyxl import load_workbook
@@ -51,6 +51,13 @@ def test_every_real_article_matches_golden(golden_run):
             compare(a, e)
         except AssertionError as error:
             raise AssertionError(f"Golden mismatch: {a['article']}") from error
+
+
+def test_previous_arithmetic_is_unchanged(golden_run):
+    _, (_, sections, *_) = golden_run
+    previous = json.loads((DIRECTORY / "arithmetic_baseline.json").read_text(encoding="utf-8"))
+    for a, before in zip(sections["articles"], previous):
+        compare({key: a[key] for key in before}, before)
 
 
 def test_real_articles_independent_arithmetic(golden_run):
@@ -95,8 +102,8 @@ def test_real_articles_independent_arithmetic(golden_run):
             a["season_fact"] == pytest.approx(official) if official is not None else a["season_fact"] is None
         )
         prior = [v for d, v in f["weekly"].items() if d < date(2026, 8, 31)]
-        if boundary is not None and all(v is not None for v in prior):
-            assert a["preseason"] == pytest.approx(sum(prior) + boundary / 7)
+        known = [v for v in prior if v is not None] + ([boundary / 7] if boundary is not None else [])
+        assert a["preseason"] == pytest.approx(sum(known)) if known else a["preseason"] is None
         if official is not None and base and base > 0:
             assert a["st"] == pytest.approx(official / base)
             if a["plan_units"]:
@@ -160,8 +167,9 @@ def test_all_exported_values_and_compact_layout(golden_run):
     for section, title in reporting.SHEETS.items():
         ws = wb[title]
         if section == "summary":
-            records = [{"label": k, "value": v} for k, v in result["display_summary"].items()]
-            columns = [("label", "Показатель"), ("value", "Значение")]
+            records, columns = result["summary_rows"], reporting.SUMMARY_COLUMNS
+        elif section == "data-quality":
+            records, columns = presentation.group_quality(sections[section]), reporting.QUALITY_GROUP_COLUMNS
         elif section == "weekly-plan":
             records = sections[section]
             columns = [
@@ -176,12 +184,21 @@ def test_all_exported_values_and_compact_layout(golden_run):
         assert ws.max_row == len(records) + 1
         assert [c.value for c in ws[1]] == [label for _, label in columns]
         assert ws.freeze_panes and ws.auto_filter.ref
-        assert all(d.width <= 45 for d in ws.column_dimensions.values())
-        assert all(d.height <= 42 for d in ws.row_dimensions.values() if d.height)
+        assert all(d.width <= (80 if section == "methodology" else 45) for d in ws.column_dimensions.values())
+        assert all(
+            d.height <= (48 if section == "methodology" else 42)
+            for d in ws.row_dimensions.values()
+            if d.height
+        )
         for cells, record in zip(ws.iter_rows(min_row=2), records):
             for cell, (key, _) in zip(cells, columns):
                 assert cell.data_type != "f" and cell.font.sz == 9
                 expected = record.get(key)
+                if key in presentation.UNIT_KEYS or (
+                    section == "summary" and key == "value" and record.get("format") == "units"
+                ):
+                    expected = presentation.display_units(expected)
+                    assert cell.number_format == "#,##0"
                 if expected == "":
                     expected = None
                 actual = cell.value
@@ -189,4 +206,6 @@ def test_all_exported_values_and_compact_layout(golden_run):
                     actual = actual.date().isoformat()
                 compare(actual, expected)
     assert not any("План неделя" in c.value for c in wb["Артикулы"][1])
+    assert 32 <= wb["Артикулы"].max_column <= 38
+    assert wb["Действия"].max_column == 8 and wb["Сводка"].max_column == 4
     wb.close()

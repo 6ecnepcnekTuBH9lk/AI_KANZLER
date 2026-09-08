@@ -7,7 +7,7 @@ from contextlib import ExitStack
 from pathlib import Path
 
 import httpx
-from merchandise_fixture import DIRECTORY, KEYS, NAMES, ROOT
+from merchandise_fixture import DIRECTORY, NAMES, ROOT, snapshot
 from openpyxl import load_workbook
 
 source = Path.home() / "Downloads"
@@ -50,6 +50,9 @@ with httpx.Client(base_url="http://127.0.0.1:8001", timeout=180) as client:
         "second-wave",
         "actions",
         "data-quality",
+        "monthly-plan",
+        "history",
+        "methodology",
     ):
         rows, offset = [], 0
         while True:
@@ -65,13 +68,13 @@ with httpx.Client(base_url="http://127.0.0.1:8001", timeout=180) as client:
         sections[section] = rows
     expected = json.loads((DIRECTORY / "expected.json").read_text(encoding="utf-8"))
     # API persistence must preserve every golden field, including nested second-wave data.
-    assert [{k: a.get(k) for k in KEYS} for a in sections["articles"]] == expected
+    assert snapshot(sections["articles"]) == expected
     response = client.get(f"/api/merchandise/runs/{identifier}/export")
     response.raise_for_status()
     path = destination / job["output_name"]
     path.write_bytes(response.content)
     wb = load_workbook(path, data_only=False)
-    assert len(wb.sheetnames) == 8 and wb["Артикулы"].max_row == 339
+    assert len(wb.sheetnames) == 11 and wb["Артикулы"].max_row == 339
     assert all(c.data_type != "f" for ws in wb for row in ws for c in row)
     wb.close()
 after = {name: hashlib.sha256((source / name).read_bytes()).hexdigest() for name in NAMES}

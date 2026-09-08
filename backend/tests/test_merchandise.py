@@ -113,6 +113,7 @@ def test_required_forecast_cover_st(merchandise_fact, article_plan):
 )
 def test_status_boundaries(execution, expected, article_plan):
     m = {
+        "season_observation_days": 34,
         "age": 35,
         "norms": {"observation_days": {"value": 28}},
         "execution": execution,
@@ -128,6 +129,7 @@ def test_status_boundaries(execution, expected, article_plan):
 
 def test_status_observation_forecast_sizes_preseason(article_plan):
     m = {
+        "season_observation_days": 34,
         "age": 35,
         "norms": {"observation_days": {"value": 28}},
         "execution": 1.0,
@@ -138,13 +140,13 @@ def test_status_observation_forecast_sizes_preseason(article_plan):
     }
     ops = {k: True for k, l in decisions.OPERATION_ORDER}
     assert decisions.status(m, ops, None, date(2026, 10, 4), START, article_plan) == "РИСК"
-    m["age"] = 3
+    m["season_observation_days"] = 3
     assert decisions.status(m, ops, None, date(2026, 10, 4), START, article_plan) == "НЕДОСТАТОЧНО ДАННЫХ"
-    m["age"] = 35
+    m["season_observation_days"] = 34
     assert decisions.status(m, ops, None, date(2026, 8, 31), START, article_plan) == "НЕДОСТАТОЧНО ДАННЫХ"
     m["execution"] = 0.5
     ops["sizes_ok"] = False
-    assert decisions.status(m, ops, None, date(2026, 10, 4), START, article_plan) == "РИСК"
+    assert decisions.status(m, ops, None, date(2026, 10, 4), START, article_plan) == "АУТСАЙДЕР"
 
 
 def test_second_wave_base_and_post_arrival(merchandise_fact, article_plan):
@@ -235,6 +237,7 @@ def test_early_plan_deadline_is_not_extended(article_plan):
 
 def test_high_preseason_pace_does_not_confirm_hit(article_plan):
     m = {
+        "season_observation_days": 6,
         "age": 35,
         "norms": {"observation_days": {"value": 28}},
         "execution": 1.2,
@@ -245,4 +248,8 @@ def test_high_preseason_pace_does_not_confirm_hit(article_plan):
         "season_pace_weeks": 0,
     }
     operations = {key: True for key, _ in decisions.OPERATION_ORDER}
-    assert decisions.status(m, operations, None, date(2026, 9, 6), START, article_plan) == "В ПЛАНЕ"
+    assert (
+        decisions.status(m, operations, None, date(2026, 9, 6), START, article_plan) == "НЕДОСТАТОЧНО ДАННЫХ"
+    )
+    m["season_observation_days"] = 34
+    assert decisions.status(m, operations, None, date(2026, 10, 4), START, article_plan) == "В ПЛАНЕ"

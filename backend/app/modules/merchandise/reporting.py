@@ -1,6 +1,7 @@
 from datetime import date
 
 from app.core.exceptions import IntegrityError
+from app.modules.merchandise.presentation import UNIT_KEYS, display_units, group_quality
 from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
@@ -12,16 +13,15 @@ ARTICLE_COLUMNS = [
     ("category", "Категория"),
     ("kind", "Вид номенклатуры"),
     ("assortment", "Вид ассортимента"),
-    ("type", "Тип сезонности"),
     ("strategy_label", "Стратегия оценки"),
     ("entry", "Дата входа"),
-    ("age", "Возраст, дней"),
+    ("season_observation_days", "Сезонное наблюдение, дней"),
     ("base", "Начальный остаток"),
     ("target", "Целевой процент реализации сезона, %"),
     ("season_plan", "План сезона, ед."),
     ("plan_pct", "План на текущую дату, % накоп."),
     ("plan_units", "План на текущую дату, ед."),
-    ("preseason", "Продажи до начала сезона, ед."),
+    ("preseason", "Продажи до начала сезона, ед. — оценка"),
     ("season_fact", "Факт продаж сезона, ед."),
     ("st", "Факт реализации сезона, %"),
     ("execution", "Выполнение плана на текущую дату, %"),
@@ -31,56 +31,46 @@ ARTICLE_COLUMNS = [
     ("current_week", "Продажи текущей недели, ед."),
     ("avg2", "Среднее за 2 недели, ед./нед."),
     ("avg4", "Среднее за 3–4 недели, ед./нед."),
-    ("wow", "Изменение неделя к неделе, %"),
     ("required", "Требуемый темп, ед./нед."),
     ("pace_ratio", "Фактический темп / требуемый, %"),
     ("cover", "Покрытие запасом, недель"),
     ("forecast", "Прогноз продаж, ед."),
     ("forecast_st", "Прогноз реализации, %"),
-    ("status", "Статус"),
+    ("preliminary_band", "Предварительный уровень выполнения"),
+    ("status", "Коммерческий статус"),
+    ("operational_state", "Операционный статус"),
+    ("operational_signal", "Операционный сигнал"),
     ("primary_cause", "Основная причина"),
-    ("secondary_cause", "Вторичная причина"),
     ("recommendation", "Рекомендация"),
     ("owner", "Ответственный"),
     ("review_date", "Контрольная дата"),
     ("review_window", "Окно проверки без утверждённой даты"),
     ("stock", "Остаток"),
-    ("weeks_remaining", "Недель до срока"),
-    ("sizes", "Размеров всего"),
-    ("avg_sizes", "Среднее размеров"),
-    ("size_availability", "Коэффициент размерной доступности"),
-    ("stores", "Магазинов с остатком"),
-    ("effective_stores", "Эффективных магазинов"),
-    ("broken_ratio", "Доля магазинов с выбитостью"),
-    ("warehouse_share", "Доля склада"),
-    ("distribution", "Коэффициент распределения"),
-    ("price", "Текущая цена"),
-    ("discount", "Текущая скидка"),
-    ("markup", "Наценка"),
-    ("margin", "Маржа"),
-    ("historical_text", "Исторический контекст"),
-    ("second_date", "Дата 2-й поставки"),
-    ("second_qty", "Объём 2-й поставки"),
-    ("qa_text", "Качество данных"),
 ]
 CATEGORY_COLUMNS = [
     ("category", "Категория"),
     ("assortment", "Вид ассортимента"),
-    ("base", "Начальный остаток"),
+    ("known_base_units", "Известный начальный остаток, ед."),
+    ("base_known_articles", "Артикулов с базой"),
     ("plan_pct", "План на дату, %"),
-    ("plan_units", "План на дату, ед."),
-    ("season_fact", "Факт продаж сезона, ед."),
+    ("known_plan_units", "Известный план на дату, ед."),
+    ("plan_known_articles", "Артикулов с планом"),
+    ("known_fact_units", "Известный факт сезона, ед."),
+    ("fact_known_articles", "Артикулов с фактом"),
     ("st", "Факт реализации, %"),
+    ("st_comparable_articles", "Сопоставимых для реализации"),
     ("execution", "Выполнение плана, %"),
+    ("execution_comparable_articles", "Сопоставимых для выполнения"),
     ("previous_week", "Предыдущая неделя, ед."),
     ("current_week", "Текущая неделя, ед."),
     ("avg2", "Среднее за 2 недели, ед./нед."),
-    ("forecast", "Прогноз продаж, ед."),
+    ("known_forecast_units", "Известный прогноз, ед."),
+    ("forecast_known_articles", "Артикулов с прогнозом"),
     ("hits", "Хиты"),
     ("on_plan", "В плане"),
     ("risks", "Риск"),
     ("outsiders", "Аутсайдер"),
-    ("count", "Количество артикулов"),
+    ("total_articles", "Всего артикулов"),
     ("conclusion", "Вывод"),
 ]
 PRICING_COLUMNS = [
@@ -95,9 +85,6 @@ PRICING_COLUMNS = [
     ("reason", "Причина"),
     ("review_date", "Контрольная дата"),
     ("review_window", "Окно проверки"),
-    ("review_limitation", "Ограничение срока"),
-    ("norms_text", "Применённые экономические нормативы"),
-    ("economics_text", "Сопоставление экономики и ограничения"),
 ]
 SECOND_COLUMNS = [
     ("article", "Артикул"),
@@ -117,7 +104,7 @@ SECOND_COLUMNS = [
     ("forecast_st", "Прогноз реализации, %"),
     ("gap", "Отклонение"),
     ("decision", "Решение"),
-    ("comment", "Комментарий"),
+    ("user_comment", "Комментарий"),
     ("scenario_forecast", "Условный прогноз без подтверждения партии, ед."),
     ("scenario_risk", "Условный недобор без подтверждения партии"),
 ]
@@ -130,8 +117,6 @@ ACTION_COLUMNS = [
     ("review_date", "Контрольная дата"),
     ("expected", "Ожидаемый результат"),
     ("review_window", "Окно проверки"),
-    ("evidence_text", "Доказательства диагноза"),
-    ("missing_evidence", "Недостающие доказательства"),
 ]
 QA_COLUMNS = [
     ("severity", "Уровень"),
@@ -163,6 +148,17 @@ SCHEMAS = {
     "second-wave": SECOND_COLUMNS,
     "actions": ACTION_COLUMNS,
     "data-quality": QA_COLUMNS,
+    "monthly-plan": [
+        ("article", "Артикул"),
+        ("category", "Категория"),
+        ("base", "Начальный остаток"),
+        ("target", "Цель реализации"),
+        ("month", "Месяц"),
+        ("plan_pct", "Доля месяца от базы"),
+        ("monthly_units", "План месяца, ед."),
+    ],
+    "history": [("article", "Артикул"), ("category", "Категория"), ("context", "Исторический контекст")],
+    "methodology": [("topic", "Правило"), ("rule", "Методика и ограничения")],
 }
 SHEETS = {
     "summary": "Сводка",
@@ -173,7 +169,23 @@ SHEETS = {
     "second-wave": "Вторая волна",
     "actions": "Действия",
     "data-quality": "Качество данных",
+    "monthly-plan": "План по месяцам",
+    "history": "История",
+    "methodology": "Методика",
 }
+SUMMARY_COLUMNS = [
+    ("label", "Показатель"),
+    ("value", "Значение"),
+    ("coverage", "Покрытие"),
+    ("meaning", "Управленческий смысл"),
+]
+QUALITY_GROUP_COLUMNS = [
+    ("severity", "Уровень"),
+    ("source", "Источник"),
+    ("message", "Комментарий"),
+    ("affected_articles", "Затронуто артикулов"),
+    ("occurrences", "Сообщений"),
+]
 
 
 def export(result, sections, path):
@@ -183,8 +195,14 @@ def export(result, sections, path):
     for section, title in SHEETS.items():
         ws = wb.create_sheet(title)
         if section == "summary":
-            columns = [("label", "Показатель"), ("value", "Значение")]
-            rows = summary
+            columns = (
+                SUMMARY_COLUMNS
+                if result.get("summary_rows")
+                else [("label", "Показатель"), ("value", "Значение")]
+            )
+            rows = result.get("summary_rows", summary)
+        elif section == "data-quality":
+            columns, rows = QUALITY_GROUP_COLUMNS, group_quality(sections[section])
         elif section == "weekly-plan":
             columns = [
                 ("article", "Артикул"),
@@ -202,6 +220,10 @@ def export(result, sections, path):
             values = []
             for key, label in columns:
                 value = row.get(key)
+                if key in UNIT_KEYS or (
+                    section == "summary" and key == "value" and row.get("format") == "units"
+                ):
+                    value = display_units(value)
                 if key in ("entry", "review_date", "second_date") and value:
                     value = date.fromisoformat(value)
                 values.append(value)
@@ -214,7 +236,18 @@ def export(result, sections, path):
             width = 12
             if key in ("article",):
                 width = 18
-            elif key in ("category", "kind", "assortment", "type", "status", "decision"):
+            elif key in (
+                "category",
+                "kind",
+                "assortment",
+                "type",
+                "status",
+                "decision",
+                "preliminary_band",
+                "operational_state",
+                "coverage",
+                "value",
+            ):
                 width = 20
             elif key in ("primary_cause", "secondary_cause", "reason", "owner"):
                 width = 26
@@ -234,9 +267,17 @@ def export(result, sections, path):
                 "evidence_text",
                 "missing_evidence",
                 "review_limitation",
+                "operational_signal",
+                "meaning",
+                "rule",
+                "context",
+                "user_comment",
+                "problem",
             ):
                 width = 42
             ws.column_dimensions[get_column_letter(ci)].width = width
+            if section == "methodology":
+                ws.column_dimensions[get_column_letter(ci)].width = 80 if key == "rule" else 20
             for ri in range(1, ws.max_row + 1):
                 c = ws.cell(ri, ci)
                 c.font = Font(name="Calibri", size=9, bold=ri == 1, color="FFFFFF" if ri == 1 else "172B4D")
@@ -256,9 +297,18 @@ def export(result, sections, path):
                 if ri > 1:
                     c.number_format = (
                         "0.0%"
-                        if key in PERCENT_KEYS or (section == "weekly-plan" and ci >= 5)
+                        if key in PERCENT_KEYS
+                        or (section == "weekly-plan" and ci >= 5)
+                        or (
+                            section == "summary"
+                            and key == "value"
+                            and rows[ri - 2].get("format") == "percent"
+                        )
                         else "dd.mm.yyyy"
                         if isinstance(c.value, date)
+                        else "#,##0"
+                        if key in UNIT_KEYS
+                        or (section == "summary" and key == "value" and rows[ri - 2].get("format") == "units")
                         else "#,##0.0"
                         if isinstance(c.value, (int, float))
                         else "@"
@@ -267,6 +317,8 @@ def export(result, sections, path):
                         c.data_type = "s"
             for ri in range(2, ws.max_row + 1):
                 ws.row_dimensions[ri].height = 36 if section in ("actions", "data-quality", "pricing") else 22
+                if section == "methodology":
+                    ws.row_dimensions[ri].height = 48
     wb.save(path)
     check = load_workbook(path, read_only=False, data_only=True)
     if check.sheetnames != list(SHEETS.values()):

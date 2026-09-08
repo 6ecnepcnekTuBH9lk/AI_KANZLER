@@ -32,7 +32,12 @@ def second_wave(f, m, p, control, end):
     if first is None and before:
         # Skill permits all cumulative sales only before second arrival.
         first = f.get("sales_total")
-        if first is None and m["season_fact"] is not None and m["preseason"] is not None:
+        if (
+            first is None
+            and m["season_fact"] is not None
+            and m["preseason"] is not None
+            and not m.get("preseason_partial")
+        ):
             first = m["season_fact"] + m["preseason"]
     left = max(0, (delivery - control).days / 7) if delivery else None
     gap = max(target - first, 0) if target is not None and first is not None else None
@@ -157,36 +162,26 @@ def operational_evidence(f, m, p):
 def status(m, operations, second, control, start, p, critical=False):
     if m.get("strategy", {}).get("kind") == "nos":
         return "НЕДОСТАТОЧНО ДАННЫХ"
-    explicit_days = m.get("norms", {}).get("observation_days", {}).get("value")
-    narrow = p and "узкосезон" in p["type"].lower()
-    if narrow and explicit_days is None:
+    min_days = observation_rule(m, p)["minimum_days"]
+    observed = m.get("season_observation_days")
+    if (
+        critical
+        or control < start
+        or m["execution"] is None
+        or observed is None
+        or min_days is None
+        or observed < min_days
+    ):
         return "НЕДОСТАТОЧНО ДАННЫХ"
-    min_days = explicit_days if explicit_days is not None and explicit_days > 0 else 14
-    observed = m["age"]
-    if critical or control < start or m["execution"] is None or observed is None or observed < min_days:
-        return "НЕДОСТАТОЧНО ДАННЫХ"
-    execution = m["execution"]
-    base = (
-        "ХИТ"
-        if execution >= 1.15
-        else "В ПЛАНЕ"
-        if execution >= 0.85
-        else "РИСК"
-        if execution >= 0.70
-        else "АУТСАЙДЕР"
-    )
+    base = preliminary_band(m["execution"])
     if not m.get("deadline") or (m["pace"] is None and control < date.fromisoformat(m["deadline"])):
         return "НЕДОСТАТОЧНО ДАННЫХ"
     risk = (
-        (m["forecast"] is not None and m["season_plan"] is not None and m["forecast"] < m["season_plan"])
-        or any(operations[k] is False for k in ("representation_ok", "sizes_ok", "distribution_ok"))
-        or (
-            m.get("cover") is not None
-            and m.get("weeks_remaining") is not None
-            and m["cover"] > m["weeks_remaining"]
-        )
-        or bool(second and second["risk"])
-        or m.get("operational_risk", False)
+        m["forecast"] is not None and m["season_plan"] is not None and m["forecast"] < m["season_plan"]
+    ) or (
+        m.get("cover") is not None
+        and m.get("weeks_remaining") is not None
+        and m["cover"] > m["weeks_remaining"]
     )
     if base == "ХИТ":
         confirmations = (
@@ -195,24 +190,121 @@ def status(m, operations, second, control, start, p, critical=False):
             and m["pace"] is not None
             and m["pace"] > 0
             and m.get("season_pace_weeks", 0) >= 2
-            and operations["representation_ok"] is True
-            and operations["sizes_ok"] is True
-            and operations["distribution_ok"] is True
-            and explicit_days is not None
         )
         if not confirmations:
             base = "В ПЛАНЕ"
     if risk and base in ("ХИТ", "В ПЛАНЕ"):
         return "РИСК"
-    if base == "АУТСАЙДЕР":
-        if explicit_days is None:
-            return "НЕДОСТАТОЧНО ДАННЫХ"
-        # Do not diagnose weak demand solely from operational unavailability.
-        if any(operations[k] is not True for k in ("representation_ok", "sizes_ok", "distribution_ok")):
-            return "РИСК"
-        if m["forecast"] is None or m["forecast"] >= m["season_plan"]:
-            return "РИСК"
+    if base == "АУТСАЙДЕР" and (m["forecast"] is None or m["forecast"] >= m["season_plan"]):
+        return "РИСК"
     return base
+
+
+def preliminary_band(execution):
+    if execution is None:
+        return None
+    return (
+        "ХИТ"
+        if execution >= 1.15
+        else "В ПЛАНЕ"
+        if execution >= 0.85
+        else "РИСК"
+        if execution >= 0.70
+        else "АУТСАЙДЕР"
+    )
+
+
+def observation_rule(m, p):
+    explicit = m.get("norms", {}).get("observation_days", {})
+    narrow = "узкосезон" in (p or {}).get("type", "").lower()
+    minimum = explicit.get("value")
+    if minimum is not None and not narrow:
+        minimum = max(14, minimum)
+    if minimum is None and not explicit.get("invalid") and not narrow:
+        minimum = 14
+    return {
+        "minimum_days": minimum,
+        "source": explicit.get("source")
+        if explicit.get("value") is not None
+        else "Skill §33 / RULES §14.3"
+        if minimum
+        else None,
+        "explicit": explicit,
+    }
+
+
+def commercial_context(m, p, control):
+    rule = observation_rule(m, p)
+    start = m.get("season_observation_start")
+    review = (
+        date.fromisoformat(start) + timedelta(days=rule["minimum_days"] - 1)
+        if start and rule["minimum_days"]
+        else None
+    )
+    return {
+        "preliminary_band": preliminary_band(m["execution"]),
+        "observation_rule": rule,
+        "earliest_status_review_date": review.isoformat() if review else None,
+    }
+
+
+def status_reason(m, p, s, critical=False):
+    minimum = observation_rule(m, p)["minimum_days"]
+    observed = m.get("season_observation_days")
+    if critical:
+        return "Существенный конфликт коммерческих данных."
+    if m.get("strategy", {}).get("kind") == "nos":
+        return "Для постоянного наличия не утверждено правило коммерческих статусов."
+    if observed is None:
+        return "Нет фактической даты коммерческого входа для сезонного наблюдения."
+    if minimum is None:
+        return "Нет однозначного утверждённого срока наблюдения."
+    if observed < minimum:
+        return f"Только {observed} дней сезонного наблюдения; требуется {minimum:g}."
+    if s == "НЕДОСТАТОЧНО ДАННЫХ":
+        return "Недостаточно данных плана, факта, срока реализации или устойчивого темпа."
+    return "Коммерческий статус по выполнению, сезонному наблюдению, устойчивому темпу и прогнозу."
+
+
+def operational_summary(f, operations, p=None, second=None):
+    sizes = diagnostic_evidence.size_state(f)
+    confirmed = [label for key, label in OPERATION_ORDER[:4] if operations.get(key) is False]
+    for key, label in (
+        ("stop_needed", "нужна остановка подсортировки"),
+        ("stores_reduction_needed", "нужно сокращение магазинов"),
+        ("warehouse_transfer_needed", "нужен перенос через склад"),
+        ("alternate_channel_needed", "нужна смена канала"),
+    ):
+        if f.get(key) is True:
+            confirmed.append(label)
+    if f.get("warehouse_skew_confirmed") is True:
+        confirmed.append("складской перекос")
+    if f.get("store_date") and p and p.get("entry") and f["store_date"] > p["entry"]:
+        confirmed.append("поздняя поставка")
+    if second and second.get("risk"):
+        confirmed.append("риск второй поставки")
+    signals = []
+    if sizes["signal"] and not sizes["problem"]:
+        signals.append("Проверить размерную доступность")
+    if f.get("distribution") is not None and operations.get("distribution_ok") is None:
+        signals.append("Проверить распределение")
+    unknown = [
+        label
+        for key, label in OPERATION_ORDER
+        if operations.get(key) is None or (key.endswith("checked") and operations.get(key) is False)
+    ]
+    signal = "Подтверждена проблема: " + ", ".join(confirmed) if confirmed else "; ".join(signals)
+    if not signal and unknown:
+        signal = "Проверить операционные условия: " + unknown[0]
+    return {
+        "operational_state": "ПОДТВЕРЖДЕННАЯ ПРОБЛЕМА"
+        if confirmed
+        else "ТРЕБУЕТ ПРОВЕРКИ"
+        if signals or unknown
+        else "НЕТ СИГНАЛА",
+        "operational_signal": signal or None,
+        "operational_details": {"confirmed": confirmed, "signals": signals, "unknown": unknown},
+    }
 
 
 def diagnose(f, m, p, operations, second, s):
@@ -243,6 +335,11 @@ def pricing(f, m, p, s, operations, second, control):
         )
     elif f.get("price") is None or f.get("discount") is None:
         decision, reason = "проверить данные", "Отсутствует текущая цена или скидка."
+    elif operational_summary(f, operations, p, second)["operational_state"] != "НЕТ СИГНАЛА":
+        decision, reason = (
+            "наблюдать",
+            "До цены: " + operational_summary(f, operations, p, second)["operational_signal"] + ".",
+        )
     elif s == "ХИТ":
         if (
             all(operations[k] is True for k in ("representation_ok", "sizes_ok", "distribution_ok"))
@@ -329,16 +426,19 @@ def pricing(f, m, p, s, operations, second, control):
 
 def recommend(f, m, p, s, causes, operations, price, second, control):
     owner = "Коммерческое планирование"
-    days_to_check = 7 - control.weekday()  # Next Monday, always future.
-    review = control + timedelta(days=days_to_check)
+    review = None
+    earliest = m.get("earliest_status_review_date")
+    if earliest and date.fromisoformat(earliest) > control:
+        review = date.fromisoformat(earliest)
+    explicit_review = m.get("norms", {}).get("review_days", {}).get("value")
+    if explicit_review:
+        review = control + timedelta(days=explicit_review)
     if m.get("strategy", {}).get("kind") == "nos":
         action = "Проверить постоянное наличие, размерный ряд, покрытие и оборачиваемость; согласовать индивидуальные нормы. Сезонная распродажа по возрасту партии не назначается."
     elif s == "НЕДОСТАТОЧНО ДАННЫХ" and not any(
         operations[k] is False for k in ("representation_ok", "sizes_ok", "distribution_ok")
     ):
         action = "Уточнить отсутствующие данные и повторить оценку после достаточного срока наблюдения."
-        if m["age"] is not None and m["age"] < 14:
-            review = control + timedelta(days=max(1, 14 - m["age"]))
     elif s in ("РИСК", "АУТСАЙДЕР", "НЕДОСТАТОЧНО ДАННЫХ"):
         actions = {
             "representation_ok": "Сверить план представленности и фактические магазины; обеспечить вход со склада в сильные точки.",
@@ -370,9 +470,6 @@ def recommend(f, m, p, s, causes, operations, price, second, control):
         action += " Пилотную линию расширять только после подтверждения спроса."
     if second and second["risk"]:
         action += " " + second["decision"].capitalize() + ": " + second["comment"]
-        if second["second_date"]:
-            confirm = date.fromisoformat(second["second_date"]) - timedelta(days=1)
-            review = min(review, confirm) if review and confirm > control else None
         owner += " / Закупки / ВЭД / Логистика"
     if (
         p
@@ -381,6 +478,29 @@ def recommend(f, m, p, s, causes, operations, price, second, control):
         and m["weeks_remaining"] < 1
     ):
         review = None
+    detail = action
+    operational = operational_summary(f, operations, p, second)
+    problem = operational["operational_signal"] or status_reason(m, p, s)
+    if m.get("strategy", {}).get("kind") == "nos":
+        action = "Проверить наличие, оборачиваемость и размерный ряд; согласовать индивидуальные нормы."
+    elif operational["operational_state"] != "НЕТ СИГНАЛА":
+        if diagnostic_evidence.size_state(f)["problem"]:
+            problem = "Подтверждена проблема ходовых размеров"
+            action = "Проверить ходовые размеры и согласовать восстановление размерного ряда."
+            owner = "Категорийный менеджер / Розница"
+        elif diagnostic_evidence.size_state(f)["signal"]:
+            problem = "Размерная доступность требует проверки"
+            action = "Проверить размеры по магазинам; подтвердить, затронуты ли ходовые размеры."
+            owner = "Категорийный менеджер / Розница"
+        else:
+            action = "Сверить представленность, распределение и складской резерв до ценового решения."
+    elif s == "НЕДОСТАТОЧНО ДАННЫХ":
+        action = "Уточнить данные и повторить коммерческую оценку после достаточного сезонного наблюдения."
+    else:
+        action = price["change"] + ". Сверить выполнение плана и прогноз на следующем срезе."
+    if second and second["risk"]:
+        problem = "Подтверждённый риск второй поставки"
+        action = "Согласовать объём и срок второй поставки с закупками и логистикой."
     happening = (
         f"Выполнение плана {m['execution'] * 100:.1f}%."
         if m["execution"] is not None
@@ -395,13 +515,14 @@ def recommend(f, m, p, s, causes, operations, price, second, control):
         if s == "НЕДОСТАТОЧНО ДАННЫХ"
         else "Средний",
         "article": f["article"],
-        "problem": causes["primary"],
+        "problem": problem,
         "action": action,
         "owner": owner,
         "review_date": review.isoformat() if review else None,
         "review_window": price["review_window"] if not review else None,
         "expected": "Подтвердить спрос, доступность и выполнение целевой реализации без необоснованной уценки.",
-        "recommendation": f"{happening} Причина: {causes['primary']}. {action} "
+        "recommendation": action,
+        "recommendation_detail": f"{happening} Причина: {causes['primary']}. {detail} "
         + (
             f"Проверка {review:%d.%m.%Y}."
             if review

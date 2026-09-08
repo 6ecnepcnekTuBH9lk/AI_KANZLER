@@ -9,6 +9,7 @@ from app.modules.merchandise import (
     metrics,
     norms,
     planning,
+    presentation,
     reporting,
 )
 from app.shared.excel import norm
@@ -98,7 +99,7 @@ def run(files, options, output_dir, progress, sessions=None):
         m["cover_interpretation"] = norms.cover_interpretation(f, m, m["norms"], m["strategy"])
         if m["strategy"]["limitation"]:
             notes.append(m["strategy"]["limitation"])
-        if "observation_days" not in m["norms"]:
+        if decisions.observation_rule(m, p)["minimum_days"] is None:
             notes.append(
                 "Не задан утверждённый срок основной оценки: значение из диапазона наблюдения не выбирается; ХИТ/АУТСАЙДЕР ограничены."
             )
@@ -142,6 +143,7 @@ def run(files, options, output_dir, progress, sessions=None):
             if f.get(key) is None:
                 notes.append(f"Отсутствует показатель: {label}.")
         operations = decisions.operational_evidence(f, m, p)
+        m.update(decisions.commercial_context(m, p, control))
         m["operational_risk"] = any(
             f.get(k) is True
             for k in (
@@ -162,10 +164,17 @@ def run(files, options, output_dir, progress, sessions=None):
             )
         second = decisions.second_wave(f, m, p, control, end)
         if second:
+            second["user_comment"] = (
+                "Подтверждённый расчёт по данным партии."
+                if second["first_sales"] is not None
+                else "Нет подтверждённого факта по партии; прогноз показан только как условный сценарий."
+            )
             sections["second-wave"].append(second)
             if second["first_sales"] is None:
                 notes.append(second["comment"])
         s = decisions.status(m, operations, second, control, start, p, critical)
+        m.update(decisions.operational_summary(f, operations, p, second))
+        m["status_reason"] = decisions.status_reason(m, p, s, critical)
         causes = decisions.diagnose(f, m, p, operations, second, s)
         notes += causes["missing_evidence"]
         price = decisions.pricing(f, m, p, s, operations, second, control)
@@ -237,6 +246,7 @@ def run(files, options, output_dir, progress, sessions=None):
                 "category": {"sheet": cat.get("source_sheet"), "row": cat.get("source_row")} if cat else None,
             },
             "recommendation": action["recommendation"],
+            "recommendation_detail": action["recommendation_detail"],
             "owner": action["owner"],
             "review_date": action["review_date"],
             "review_window": action["review_window"],
@@ -256,6 +266,28 @@ def run(files, options, output_dir, progress, sessions=None):
             "second_wave": second,
         }
         sections["articles"].append(a)
+        monthly = defaultdict(float)
+        for d, share in (trajectory or {}).get("daily", {}).items():
+            monthly[d.strftime("%Y-%m")] += share
+        for month, share in monthly.items():
+            sections["monthly-plan"].append(
+                {
+                    "article": article,
+                    "category": a["category"],
+                    "base": a["base"],
+                    "target": a["target"],
+                    "month": month,
+                    "plan_pct": share,
+                    "monthly_units": a["base"] * share,
+                }
+            )
+        snapshot = historical.get("final_snapshot")
+        context = (
+            f"ОЗ25: {snapshot['articles']} сопоставимых артикулов категории; период среза шире сезона. Только контекст."
+            if snapshot
+            else "Нет сопоставимого итогового среза; доступную недельную историю см. в карточке."
+        )
+        sections["history"].append({"article": article, "category": a["category"], "context": context})
         sections["pricing"].append(price)
         sections["actions"].append(action)
         week_row = {k: a[k] for k in ("article", "code", "base", "target")}
@@ -288,6 +320,8 @@ def run(files, options, output_dir, progress, sessions=None):
                 }
             )
     grouped = defaultdict(list)
+    qa[:] = presentation.deduplicate_quality(qa)
+    sections["methodology"] = presentation.methodology(start, end)
     for a in sections["articles"]:
         grouped[(a["category"], a["assortment"])].append(a)
     for (category, assortment), rows in grouped.items():
@@ -314,6 +348,7 @@ def run(files, options, output_dir, progress, sessions=None):
         if summary["execution"] is not None
         else None,
         "Прогноз продаж, ед.": summary["forecast"],
+        "Продажи до начала сезона, ед. — оценка": summary["preseason"],
         **counts,
         "Риски второй поставки": sum(s["risk"] for s in sections["second-wave"]),
         "Условные риски второй поставки без подтверждения партии": sum(
@@ -331,20 +366,14 @@ def run(files, options, output_dir, progress, sessions=None):
         ),
         "Сообщения качества данных": len(qa),
     }
-    for key, label in (
-        ("base", "Начальный остаток"),
-        ("plan_units", "План на дату"),
-        ("season_fact", "Факт сезона"),
-        ("forecast", "Прогноз"),
-    ):
-        coverage = summary["coverage"][key]
-        display[f"{label}: сумма по доступным данным, ед."] = coverage["known_sum"]
-        display[f"{label}: артикулов с данными"] = coverage["known_count"]
-    display["Сопоставимый набор: артикулов с базой, планом и фактом"] = summary["comparable"]["count"]
-    comparable_execution = summary["comparable"]["execution"]
-    display["Сопоставимый набор: выполнение плана, %"] = (
-        comparable_execution * 100 if comparable_execution is not None else None
-    )
+    for field, prefix in (("preliminary_band", "Предварительно"), ("operational_state", "Операционно")):
+        for value in dict.fromkeys(a[field] for a in sections["articles"]):
+            display[f"{prefix}: {value or 'нет данных'}"] = sum(
+                a[field] == value for a in sections["articles"]
+            )
+    quality_summary = presentation.group_quality(qa)
+    display["Группы сообщений качества данных"] = len(quality_summary)
+    management_rows = presentation.summary_rows(summary, display)
     week_columns = []
     for d in planning.weekly_ends(start, end):
         monday = d - planning.timedelta(days=d.weekday())
@@ -361,6 +390,10 @@ def run(files, options, output_dir, progress, sessions=None):
         "summary": summary,
         "counts": counts,
         "display_summary": display,
+        "summary_rows": management_rows,
+        "quality_summary": quality_summary,
+        "presentation_version": 2,
+        "unit_keys": sorted(presentation.UNIT_KEYS),
         "week_columns": week_columns,
         "schemas": reporting.SCHEMAS,
         "sources": {role: f.original_name for role, (f, t) in roles.items()},
@@ -375,8 +408,8 @@ def run(files, options, output_dir, progress, sessions=None):
 
 def aggregate(rows):
     def total(key):
-        values = [r.get(key) for r in rows]
-        return sum(values) if values and all(v is not None for v in values) else None
+        values = [r[key] for r in rows if r.get(key) is not None]
+        return sum(values) if values else None
 
     result = {
         k: total(k)
@@ -390,6 +423,7 @@ def aggregate(rows):
             "forecast",
             "season_plan",
             "stock",
+            "preseason",
         )
     }
     result.update(
@@ -410,19 +444,41 @@ def aggregate(rows):
         }
     )
     result["planned_count"] = sum(r["plan_units"] is not None for r in rows)
-    # Known-value subtotals are explicitly separate from complete collection totals.
+    # Totals are known subtotals, explicitly accompanied by their own coverage.
     result["coverage"] = {
         k: {
             "known_count": sum(r.get(k) is not None for r in rows),
-            "known_sum": sum(r[k] for r in rows if r.get(k) is not None),
+            "known_sum": total(k),
         }
-        for k in ("base", "plan_units", "season_fact", "forecast")
+        for k in ("base", "plan_units", "season_fact", "forecast", "preseason")
     }
-    comparable = [r for r in rows if all(r.get(k) is not None for k in ("base", "plan_units", "season_fact"))]
+    result["total_articles"] = len(rows)
+    for name, key in (
+        ("base", "base"),
+        ("plan", "plan_units"),
+        ("fact", "season_fact"),
+        ("forecast", "forecast"),
+    ):
+        result[f"{name}_known_articles"] = result["coverage"][key]["known_count"]
+        result[f"known_{name}_units"] = total(key)
+    for metric, numerator, denominator in (
+        ("st", "season_fact", "base"),
+        ("execution", "season_fact", "plan_units"),
+        ("plan_pct", "plan_units", "base"),
+    ):
+        subset = [r for r in rows if r.get(numerator) is not None and r.get(denominator) is not None]
+        result[metric] = (
+            metrics.ratio(sum(r[numerator] for r in subset), sum(r[denominator] for r in subset))
+            if subset
+            else None
+        )
+        result[metric + "_comparable_articles"] = len(subset)
+    comparable = [r for r in rows if all(r.get(k) is not None for k in ("plan_units", "season_fact"))]
+    result["comparable_articles"] = len(comparable)
     result["comparable"] = {
         "count": len(comparable),
-        "plan_units": sum(r["plan_units"] for r in comparable),
-        "season_fact": sum(r["season_fact"] for r in comparable),
+        "plan_units": sum(r["plan_units"] for r in comparable) if comparable else None,
+        "season_fact": sum(r["season_fact"] for r in comparable) if comparable else None,
     }
     result["comparable"]["execution"] = metrics.ratio(
         result["comparable"]["season_fact"], result["comparable"]["plan_units"]

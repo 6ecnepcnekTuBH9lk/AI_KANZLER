@@ -16,6 +16,7 @@ from types import SimpleNamespace
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "backend"))
 from app.modules.merchandise import importers
+from app.modules.merchandise.presentation import UNIT_KEYS, display_units
 from app.modules.merchandise.service import run
 from openpyxl import Workbook
 
@@ -48,6 +49,14 @@ KEYS = (
     "secondary_cause",
     "recommendation",
     "second_wave",
+    "season_observation_start",
+    "season_observation_days",
+    "preliminary_band",
+    "operational_state",
+    "operational_signal",
+    "earliest_status_review_date",
+    "preseason_estimated",
+    "preseason_partial",
 )
 
 
@@ -72,7 +81,13 @@ def materialize(directory):
 
 
 def snapshot(rows):
-    return [{key: row.get(key) for key in KEYS} for row in rows]
+    return [
+        {
+            **{key: row.get(key) for key in KEYS},
+            "display_units": {key: display_units(row[key]) for key in sorted(UNIT_KEYS) if key in row},
+        }
+        for row in rows
+    ]
 
 
 def capture():

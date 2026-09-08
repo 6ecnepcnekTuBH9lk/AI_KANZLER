@@ -27,7 +27,8 @@ def sales_window(fact, start, control, end):
     if not weekly:
         return None, None, ["Нет недельных или дневных продаж."]
     official = 0.0 if control >= start else None
-    pre = 0.0
+    prior_values = []
+    prior_missing = False
     present = set()
     for week, qty in sorted(weekly.items()):
         if week > control:
@@ -47,13 +48,24 @@ def sales_window(fact, start, control, end):
                         "Факт граничной недели распределён пропорционально календарным дням сезонного окна."
                     )
         if prior_days:
-            pre = None if qty is None or pre is None else pre + qty * prior_days / denominator
+            if qty is None:
+                prior_missing = True
+            else:
+                prior_values.append(qty * prior_days / denominator)
+                if prior_days != denominator:
+                    qa.append("Предсезонный факт оценён пропорциональным распределением граничной недели.")
     if control >= start:
         needed = {d - timedelta(days=d.weekday()) for d in days(start, stop)}
         if not needed.issubset(present):
             official = None
             qa.append("Пропущены недели официального сезона; сезонный факт не рассчитан.")
-    return official, pre, qa
+    if prior_missing:
+        qa.append(
+            "Предсезонные продажи показаны по известным неделям; пропуски не заменены нулём."
+            if prior_values
+            else "Предсезонные продажи неизвестны: нет заполненных недель до начала сезона."
+        )
+    return official, sum(prior_values) if prior_values else None, qa
 
 
 def pace_metrics(fact, control, start, end):
@@ -138,6 +150,9 @@ def calculate(fact, plan, trajectory, control, start, end, plan_pct, plan_units)
     if not fact["store_date"] and not fact["sales_date"] and fact["warehouse_date"]:
         qa.append("Возраст рассчитан от поступления на склад, дата коммерческого входа неизвестна.")
     age = (control - entry).days if entry else None
+    commercial_entry = fact["store_date"] or fact["sales_date"]
+    observation_start = max(start, commercial_entry) if commercial_entry else None
+    observation_days = max(0, (min(control, end) - observation_start).days + 1) if observation_start else None
     if age is not None and age < 0:
         qa.append("Дата входа позже контрольной даты.")
         age = None
@@ -203,6 +218,10 @@ def calculate(fact, plan, trajectory, control, start, end, plan_pct, plan_units)
         "forecast": forecast,
         "forecast_st": ratio(forecast, valid_base),
         "age": age,
+        "season_observation_start": observation_start.isoformat() if observation_start else None,
+        "season_observation_days": observation_days,
+        "preseason_estimated": not bool(fact.get("daily")) and preseason is not None,
+        "preseason_partial": any("по известным неделям" in n for n in notes + qa),
         "entry": entry.isoformat() if entry else None,
         "deadline": deadline.isoformat() if deadline else None,
         "weeks_remaining": remaining,

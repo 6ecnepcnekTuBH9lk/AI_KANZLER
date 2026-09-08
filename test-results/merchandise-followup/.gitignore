@@ -1,0 +1,4 @@
+# Isolated acceptance runtime; reports and verification remain reviewable.
+server/
+inputs/
+node_modules/

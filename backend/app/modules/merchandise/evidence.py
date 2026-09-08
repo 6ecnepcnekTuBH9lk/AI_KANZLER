@@ -21,8 +21,7 @@ LABELS = {
 
 def size_state(f):
     fields = []
-    if f.get("sizes_ok") is False:
-        fields.append("sizes_ok")
+    confirmed = f.get("sizes_ok") is False
     for key in ("broken_ratio", "broken_stores"):
         if f.get(key) is not None and f[key] > 0:
             fields.append(key)
@@ -36,13 +35,16 @@ def size_state(f):
         if f.get(k) is not None
     ]
     return {
-        "state": "Подтверждена агрегатная проблема"
+        "state": "Подтверждённая проблема"
+        if confirmed
+        else "Требует проверки"
         if fields
         else "Признаков проблемы нет"
-        if known
+        if f.get("sizes_ok") is True
         else "Нет данных для проверки",
-        "problem": bool(fields),
-        "fields": fields,
+        "problem": confirmed,
+        "signal": bool(fields),
+        "fields": (["sizes_ok"] if confirmed else []) + fields,
         "known_fields": known,
         "core_sizes_confirmed": f.get("sizes_ok") is True and not fields,
         "limitation": "Агрегаты не определяют конкретный отсутствующий размер или магазин; ходовые размеры требуют отдельного подтверждения.",
@@ -90,6 +92,12 @@ def diagnose(f, m, p, operations, second, status):
     sizes = size_state(f)
     if sizes["problem"]:
         add("проблема размерной доступности", "Skill §29: агрегатная размерная доступность", sizes["fields"])
+    elif sizes["signal"]:
+        add(
+            "размерная доступность требует проверки",
+            "Агрегатный сигнал без утверждённого порога",
+            sizes["fields"],
+        )
     if operations.get("distribution_ok") is False:
         add("ошибочное распределение", "Skill §30,40: подтверждённое распределение", ["distribution_ok"])
     if f.get("warehouse_skew_confirmed") is True or (

@@ -55,6 +55,9 @@ const tabs = [
   ["second-wave", "Вторая волна"],
   ["actions", "Действия"],
   ["data-quality", "Качество данных"],
+  ["monthly-plan", "План по месяцам"],
+  ["history", "История"],
+  ["methodology", "Методика"],
 ];
 const statusColor: Record<string, string> = {
   ХИТ: "green",
@@ -92,12 +95,23 @@ function ResultTable({
       typeof a[key] === "number" && typeof b[key] === "number"
         ? a[key] - b[key]
         : String(a[key] ?? "").localeCompare(String(b[key] ?? ""), "ru"),
-    render: (v: unknown) =>
-      key === "status" ? (
+    render: (v: unknown, row: DataRow) =>
+      ["status", "preliminary_band", "operational_state"].includes(key) && v ? (
         <Status value={String(v)} />
       ) : (
         <span title={format(v, key)}>
-          {format(v, /^\d{4}-\d{2}-\d{2}$/.test(key) ? "st" : key)}
+          {format(
+            v,
+            key === "value"
+              ? row.format === "units"
+                ? "base"
+                : row.format === "percent"
+                  ? "st"
+                  : row.field || key
+              : /^\d{4}-\d{2}-\d{2}$/.test(key)
+                ? "st"
+                : key,
+          )}
         </span>
       ),
     fixed: i === 0 ? ("left" as const) : undefined,
@@ -373,6 +387,23 @@ export function Details({
       ) : (
         <>
           <p>{row.recommendation}</p>
+          <Title level={5}>Коммерческий результат</Title>
+          <Descriptions
+            bordered
+            column={1}
+            items={[
+              ["status", "Коммерческий статус"],
+              ["preliminary_band", "Предварительный уровень выполнения"],
+              ["status_reason", "Основание статуса"],
+              ["season_observation_start", "Начало сезонного наблюдения"],
+              ["season_observation_days", "Сезонное наблюдение, дней"],
+              ["earliest_status_review_date", "Первая допустимая дата оценки"],
+            ].map(([key, label]) => ({
+              key,
+              label,
+              children: format(row[key], key),
+            }))}
+          />
           <Descriptions
             bordered
             column={2}
@@ -382,9 +413,12 @@ export function Details({
               ["plan_units", "План на дату, ед."],
               ["season_fact", "Факт сезона, ед."],
               ["execution", "Выполнение плана"],
-              ["preseason", "Предсезон, ед."],
-              ["forecast", "Прогноз, ед."],
-              ["cover", "Покрытие, недель"],
+              [
+                "preseason",
+                row.preseason_estimated
+                  ? "Предсезон, ед. — оценка"
+                  : "Предсезон, ед.",
+              ],
               ["deadline", "Срок реализации"],
               ["review_date", "Дата проверки"],
               ["strategy_label", "Стратегия оценки"],
@@ -395,24 +429,107 @@ export function Details({
               children: format(row[key], key),
             }))}
           />
-          <Title level={5}>Основания диагноза</Title>
-          {(row.diagnosis?.evidence || []).map((item: DataRow, i: number) => (
-            <div key={i}>
-              <strong>{item.diagnosis}</strong>
-              <p>{item.rule}</p>
-              <ResultTable
-                rows={item.inputs || []}
-                schema={[
-                  ["label", "Показатель"],
-                  ["value", "Значение"],
-                  ["source", "Источник"],
-                  ["sheet", "Лист"],
-                  ["row", "Строка"],
-                ]}
+          <Title level={5}>Операционная диагностика</Title>
+          <Status
+            value={
+              row.operational_state || "Нет отдельной оценки в старом запуске"
+            }
+          />
+          <p>{row.operational_signal}</p>
+          <Descriptions
+            bordered
+            column={2}
+            items={[
+              ["sizes", "Размеров всего"],
+              ["avg_sizes", "Среднее размеров"],
+              ["size_availability", "Размерная доступность"],
+              ["broken_ratio", "Доля магазинов с выбитостью"],
+              ["stores", "Магазинов с остатком"],
+              ["distribution", "Распределение"],
+            ].map(([key, label]) => ({
+              key,
+              label,
+              children: format(row[key], key),
+            }))}
+          />
+          <p>{row.diagnosis?.sizes?.limitation}</p>
+          <ResultTable
+            rows={row.operations || []}
+            schema={[
+              ["step", "Порядок"],
+              ["check", "Проверка"],
+              ["confirmed", "Подтверждено"],
+            ]}
+          />
+          <p>{row.pricing?.reason}</p>
+          <Title level={5}>Прогноз</Title>
+          <Descriptions
+            bordered
+            column={2}
+            items={[
+              ["forecast", "Прогноз, ед."],
+              ["forecast_st", "Прогноз реализации"],
+              ["avg2", "Среднее за 2 недели, ед./нед."],
+              ["avg4", "Среднее за 3–4 недели, ед./нед."],
+              ["pace", "Устойчивый темп, ед./нед."],
+              ["required", "Требуемый темп, ед./нед."],
+              ["season_pace_weeks", "Недель темпа внутри сезона"],
+              ["cover", "Покрытие, недель"],
+            ].map(([key, label]) => ({
+              key,
+              label,
+              children: format(row[key], key),
+            }))}
+          />
+          <p>{row.cover_interpretation}</p>
+          <Title level={5}>Вторая волна</Title>
+          {row.second_wave ? (
+            <>
+              <Descriptions
+                bordered
+                column={2}
+                items={[
+                  ["second_date", "Дата поставки"],
+                  ["second_qty", "Объём, ед."],
+                  ["first_sales", "Подтверждённый факт партии, ед."],
+                  ["forecast", "Подтверждённый прогноз, ед."],
+                  ["scenario_forecast", "Условный прогноз, ед."],
+                  ["risk", "Подтверждённый риск"],
+                  ["scenario_risk", "Условный риск"],
+                  ["decision", "Решение"],
+                ].map(([key, label]) => ({
+                  key,
+                  label,
+                  children: format(row.second_wave[key], key),
+                }))}
               />
-            </div>
-          ))}
-          <p>{(row.diagnosis?.missing_evidence || []).join(" ")}</p>
+              <p>{row.second_wave.comment}</p>
+            </>
+          ) : (
+            <p>Вторая поставка не задана.</p>
+          )}
+          <Title level={5}>Доказательства и качество данных</Title>
+          <p>{row.recommendation_detail}</p>
+          <details>
+            <summary>Основания диагноза</summary>
+            {(row.diagnosis?.evidence || []).map((item: DataRow, i: number) => (
+              <div key={i}>
+                <strong>{item.diagnosis}</strong>
+                <p>{item.rule}</p>
+                <ResultTable
+                  rows={item.inputs || []}
+                  schema={[
+                    ["label", "Показатель"],
+                    ["value", "Значение"],
+                    ["source", "Источник"],
+                    ["sheet", "Лист"],
+                    ["row", "Строка"],
+                  ]}
+                />
+              </div>
+            ))}
+            <p>{(row.diagnosis?.missing_evidence || []).join(" ")}</p>
+          </details>
           <Title level={5}>Экономические нормативы</Title>
           <p>{row.norms_text || "Точные нормативы в источниках не найдены"}</p>
           <ResultTable
@@ -466,16 +583,6 @@ export function Details({
               </LineChart>
             </ResponsiveContainer>
           </div>
-          <Title level={5}>Проверки перед ценовым решением</Title>
-          <ResultTable
-            rows={row.operations || []}
-            schema={[
-              ["step", "Порядок"],
-              ["check", "Проверка"],
-              ["confirmed", "Подтверждено"],
-            ]}
-          />
-          <p>{row.pricing?.reason}</p>
           <Title level={5}>Исторический контекст</Title>
           <p>{row.historical_text}</p>
           <Alert
@@ -489,7 +596,7 @@ export function Details({
   );
 }
 
-function Summary({ result }: { result: DataRow }) {
+export function Summary({ result }: { result: DataRow }) {
   const s = result.summary;
   return (
     <>
@@ -516,7 +623,7 @@ function Summary({ result }: { result: DataRow }) {
           return (
             <Card key={key}>
               <Statistic title={label} value={format(value, key)} />
-              {incomplete && (
+              {(incomplete || coverage) && (
                 <Text type="secondary">
                   {count > 0
                     ? `${key === "execution" ? "Сопоставимый набор" : "Доступные данные"}: ${count} из ${s.count} артикулов`
@@ -543,7 +650,8 @@ function Summary({ result }: { result: DataRow }) {
         </p>
         <p className="muted">
           План на дату доступен для {s.planned_count} из {s.count} артикулов.
-          Если исходные показатели неполны, общий итог обозначается «—».
+          Суммы показаны по известным данным с покрытием; неизвестные значения
+          не заменены нулём.
         </p>
       </Card>
       <Card title="Расчёт по доступным данным">
@@ -555,6 +663,7 @@ function Summary({ result }: { result: DataRow }) {
               plan_units: "План на дату",
               season_fact: "Факт сезона",
               forecast: "Прогноз",
+              preseason: "Предсезон — оценка",
             };
             return (
               <div className="coverage-value" key={key}>
@@ -562,7 +671,7 @@ function Summary({ result }: { result: DataRow }) {
                   {labels[key]} · {c.known_count} артикулов
                 </Text>
                 <div>
-                  <strong>{format(c.known_sum)} ед.</strong>
+                  <strong>{format(c.known_sum, key)} ед.</strong>
                 </div>
               </div>
             );
@@ -574,17 +683,29 @@ function Summary({ result }: { result: DataRow }) {
         </p>
       </Card>
       <Card title="Управленческая сводка">
-        <Descriptions
-          bordered
-          column={2}
-          items={Object.entries(result.display_summary).map(
-            ([label, value]) => ({
-              key: label,
-              label,
-              children: format(value),
-            }),
-          )}
-        />
+        {result.summary_rows ? (
+          <ResultTable
+            rows={result.summary_rows}
+            schema={[
+              ["label", "Показатель"],
+              ["value", "Значение"],
+              ["coverage", "Покрытие"],
+              ["meaning", "Управленческий смысл"],
+            ]}
+          />
+        ) : (
+          <Descriptions
+            bordered
+            column={2}
+            items={Object.entries(result.display_summary).map(
+              ([label, value]) => ({
+                key: label,
+                label,
+                children: format(value),
+              }),
+            )}
+          />
+        )}
       </Card>
     </>
   );
@@ -693,6 +814,10 @@ function ModulePage({
         "forecast",
         "stock",
         "status",
+        "preliminary_band",
+        "operational_state",
+        "operational_signal",
+        "season_observation_days",
         "primary_cause",
       ].includes(key),
     );
@@ -793,13 +918,38 @@ function ModulePage({
                 setQ("");
                 setStatus("");
               }}
-              items={tabs.map(([key, label]) => ({ key, label }))}
+              items={tabs
+                .filter(
+                  ([key]) =>
+                    !["monthly-plan", "history", "methodology"].includes(key) ||
+                    job.result?.schemas?.[key],
+                )
+                .map(([key, label]) => ({ key, label }))}
             />
           )}
           {module === "merchandise" && tab === "summary" ? (
             <Summary result={job.result} />
           ) : (
             <Card className="results-card">
+              {module === "merchandise" &&
+                tab === "data-quality" &&
+                job.result.quality_summary && (
+                  <details open>
+                    <summary>
+                      Группы проблем — {job.result.quality_summary.length};
+                      детализация по артикулам ниже
+                    </summary>
+                    <ResultTable
+                      rows={job.result.quality_summary}
+                      schema={[
+                        ["message", "Проблема"],
+                        ["source", "Источник"],
+                        ["affected_articles", "Артикулов"],
+                        ["occurrences", "Сообщений"],
+                      ]}
+                    />
+                  </details>
+                )}
               <Space className="table-tools" wrap>
                 <Input.Search
                   aria-label="Поиск по результатам"

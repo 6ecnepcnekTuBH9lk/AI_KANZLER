@@ -54,13 +54,58 @@ export function format(value: unknown, key = ""): string {
   if (typeof value === "boolean") return value ? "Да" : "Нет";
   if (typeof value === "number")
     return new Intl.NumberFormat("ru-RU", {
-      maximumFractionDigits: 1,
+      maximumFractionDigits: unitKeys.has(key) ? 0 : 1,
+      minimumFractionDigits: percentKeys.has(key) ? 1 : 0,
       style: percentKeys.has(key) ? "percent" : "decimal",
     }).format(value);
   if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value))
     return value.split("-").reverse().join(".");
   return String(value);
 }
+// Intl halfExpand matches backend Decimal ROUND_HALF_UP, including negative ties.
+export function displayUnits(value: number | null | undefined): string {
+  return format(value, "base");
+}
+export const unitKeys = new Set([
+  "base",
+  "season_plan",
+  "plan_units",
+  "preseason",
+  "season_fact",
+  "gap_units",
+  "previous_week",
+  "current_week",
+  "forecast",
+  "stock",
+  "second_qty",
+  "first_sales",
+  "target70",
+  "remaining70",
+  "scenario_forecast",
+  "gap",
+  "monthly_units",
+  "quantity",
+  "known_base_units",
+  "known_plan_units",
+  "known_fact_units",
+  "known_forecast_units",
+  "count",
+  "total_articles",
+  "base_known_articles",
+  "plan_known_articles",
+  "fact_known_articles",
+  "forecast_known_articles",
+  "comparable_articles",
+  "st_comparable_articles",
+  "execution_comparable_articles",
+  "affected_articles",
+  "occurrences",
+  "season_observation_days",
+  "hits",
+  "on_plan",
+  "risks",
+  "outsiders",
+]);
 export const percentKeys = new Set([
   "target",
   "plan_pct",

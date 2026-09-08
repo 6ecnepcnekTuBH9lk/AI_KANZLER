@@ -1,0 +1,56 @@
+{
+  "job_id": "333882f7e9a447908f4ed51fd0efdc46",
+  "sqlite_api_exact": true,
+  "sections": {
+    "articles": 338,
+    "categories": 32,
+    "weekly-plan": 338,
+    "pricing": 338,
+    "second-wave": 19,
+    "actions": 338,
+    "data-quality": 5449,
+    "monthly-plan": 1338,
+    "history": 338,
+    "methodology": 12
+  },
+  "all_exported_cells_match": true,
+  "checked_cells": 41453,
+  "sheets": [
+    "Сводка",
+    "Категории",
+    "Артикулы",
+    "План по неделям",
+    "Ценовые решения",
+    "Вторая волна",
+    "Действия",
+    "Качество данных",
+    "План по месяцам",
+    "История",
+    "Методика"
+  ],
+  "articles_columns": 38,
+  "grouped_qa_rows": 43,
+  "legacy_job_id": "merchandise-followup-legacy",
+  "legacy_json_unchanged_sha256": "15ab0d2a22dfb113cab648ac85b078d79dfefbcc57cf547767fa272edbe5a8b4",
+  "legacy_export_unchanged": true,
+  "input_sha256": {
+    "ОЗ26_W33_план_сезона 28.08+фото.xlsx": "18185970fd06c1fbe9c954f1baca97f8fbbab497a1d6f34c99da3b0defe168c6",
+    "План сезона ОЗ 26-27 из ценообразования.xlsx": "0997a908cbdae10a457a4644abaf4c2560ad6742adce2efcc706d79bd1860446",
+    "Анализ продаж (Общий) (XLSX) 2026-09-06.xlsx": "bd1f147b6d8761cdae677c1a9555f10e20529f64e4d2633832579f23cf823d9c"
+  },
+  "ui_checks": {
+    "new_summary_integer_coverage": true,
+    "article_five_blocks": true,
+    "separate_three_assessments": true,
+    "actions_problem_matches_action": true,
+    "legacy_eight_tabs_original_statuses": true
+  },
+  "tests": {
+    "pytest": 255,
+    "frontend_tests": 12,
+    "ruff": "passed",
+    "lint": "passed",
+    "typecheck": "passed",
+    "build": "passed"
+  }
+}

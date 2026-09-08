@@ -56,6 +56,7 @@ def test_preseason_and_late_delivery_do_not_shift_official_execution(merchandise
 
 def test_nos_does_not_inherit_seasonal_status(merchandise_fact, article_plan):
     m = {
+        "season_observation_days": 34,
         "age": 35,
         "execution": 1.0,
         "deadline": END.isoformat(),
@@ -88,7 +89,8 @@ def test_aggregate_sizes_proven_not_guessed(field, value, merchandise_fact, arti
     merchandise_fact[field] = value
     ops = decisions.operational_evidence(merchandise_fact, {}, article_plan)
     d = evidence.diagnose(merchandise_fact, {}, article_plan, ops, None, "НЕДОСТАТОЧНО ДАННЫХ")
-    assert d["primary"] == "проблема размерной доступности"
+    assert d["primary"] == "размерная доступность требует проверки"
+    assert not d["sizes"]["problem"] and ops["sizes_ok"] is None
     assert field in [x["field"] for x in d["evidence"][0]["inputs"]]
     assert not d["sizes"]["core_sizes_confirmed"] and d["missing_evidence"]
     assert before == metrics.sales_window(merchandise_fact, START, CONTROL, END)
@@ -97,7 +99,7 @@ def test_aggregate_sizes_proven_not_guessed(field, value, merchandise_fact, arti
 def test_no_size_evidence_is_not_confirmed_healthy():
     assert evidence.size_state({})["state"] == "Нет данных для проверки"
     s = evidence.size_state({"sizes": 6, "avg_sizes": 6, "broken_ratio": 0})
-    assert s["state"] == "Признаков проблемы нет" and not s["core_sizes_confirmed"]
+    assert s["state"] == "Нет данных для проверки" and not s["core_sizes_confirmed"]
 
 
 def test_planned_delivery_is_not_actual_party_evidence(merchandise_fact, article_plan):
@@ -167,6 +169,7 @@ def test_unperformed_check_is_not_a_negative_business_fact(article_plan):
     ops = dict.fromkeys(dict(decisions.OPERATION_ORDER), True)
     ops["stop_checked"] = False
     m = {
+        "season_observation_days": 34,
         "age": 35,
         "execution": 1,
         "deadline": END.isoformat(),
