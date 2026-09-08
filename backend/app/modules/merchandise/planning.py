@@ -15,8 +15,15 @@ def build_plan(plan, category, base, start, end):
     """Skill §16. No first-batch quantity is accepted by this function."""
     warnings = []
     if plan is None:
-        return None, ["Нет утверждённого поартикульного плана."]
+        if not category:
+            return None, ["Нет утверждённого поартикульного плана или точного категорийного норматива."]
+        plan = category
+        warnings.append(
+            "Индивидуальный план отсутствует: применён точный категорийный норматив согласно уточнению пользователя."
+        )
     target = plan["target"]
+    if target is None and plan.get("target_raw"):
+        return None, ["Явный целевой процент некорректен; категорийная замена не выполнена."]
     if target is None and category:
         target = category["target"]
         if target is not None:
@@ -26,6 +33,8 @@ def build_plan(plan, category, base, start, end):
     if base is None or base <= 0:
         return None, ["Для расчёта плана нужен положительный начальный остаток."]
     source = plan
+    if plan.get("invalid_months"):
+        return None, ["Месячная форма содержит нечисловое значение; категорийная замена не выполнена."]
     official = plan.get("weekly_plan", {})
     if official:
         points = sorted(
@@ -50,21 +59,18 @@ def build_plan(plan, category, base, start, end):
             previous, previous_date = cumulative, week_end + timedelta(days=1)
         warnings.append("Внутри официальной недели план распределён равномерно для контрольной даты.")
     else:
-        if not source["months"] and category:
+        if not any(v is not None for v in source["months"].values()) and category:
             source = category
             warnings.append("Месячная форма взята из точного категорийного норматива.")
+        if source.get("invalid_months"):
+            return None, warnings + ["Категорийная месячная форма содержит нечисловое значение."]
         month_keys = season_months(start, end)
         values = [source["months"].get(m) for y, m in month_keys]
         if not values or any(v is None or v < 0 for v in values) or sum(values) <= 0:
             return None, warnings + ["Отсутствует, неполна или некорректна месячная форма плана."]
-        if source["month_mode"] == "pct":
-            if abs(sum(values) - target) > 1e-6:
-                return None, warnings + [
-                    "Сумма месячных процентов не равна целевому проценту; требуется согласование плана."
-                ]
-            shares = values
-        else:
-            shares = [target * v / sum(values) for v in values]
+        shares = [target * v / sum(values) for v in values]
+        if source["month_mode"] == "pct" and abs(sum(values) - target) > 1e-6:
+            warnings.append("Полная месячная форма нормирована на утверждённый целевой процент реализации.")
         daily = {}
         for (year, month), share in zip(month_keys, shares):
             interval = list(

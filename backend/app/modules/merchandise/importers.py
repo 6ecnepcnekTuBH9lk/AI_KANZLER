@@ -5,6 +5,7 @@ from collections import Counter
 from datetime import date, timedelta
 
 from app.core.exceptions import InputError
+from app.modules.merchandise import norms
 from app.shared.excel import as_date, fraction, norm, number, read_tables
 
 MONTHS = {
@@ -55,6 +56,8 @@ ALIASES = {
     "gross_profit": ["Валовая прибыль"],
     "avg_cost_stock": ["Средний запас по себестоимости"],
     "repricing_date": ["Дата последней переоценки"],
+    "broken_stores": ["Количество магазинов с выбитостью"],
+    "turnover": ["Оборачиваемость товарного запаса", "Оборачиваемость"],
 }
 BOOLEAN_FIELDS = {
     "representation_ok": "Представленность достаточна",
@@ -71,6 +74,15 @@ BOOLEAN_FIELDS = {
     "price_room": "Ценовой потенциал подтвержден",
     "price_effect": "Эффект переоценки подтвержден",
     "seasonality_confirmed": "Сезонность подтверждена",
+    "inventory_months_ok": "Запас в месяцах второй поставки допустим",
+    "replenishment_needed": "Нужна подсортировка",
+    "stop_needed": "Нужна остановка подсортировки",
+    "stores_reduction_needed": "Нужно сократить количество магазинов",
+    "warehouse_transfer_needed": "Нужно перераспределение через склад",
+    "alternate_channel_needed": "Нужен альтернативный канал",
+    "warehouse_skew_confirmed": "Складской перекос подтвержден",
+    "gmroi_scope_ok": "Период и состав данных доходности сопоставимы",
+    "second_not_arrived": "Вторая поставка ещё не поступила",
 }
 
 
@@ -255,9 +267,18 @@ def read_fact(table, season, articles):
             continue
         if season != "ОЗ26" and article not in articles:
             continue
-        out = {"source_row": ri}
+        out = {"source_row": ri, "source_sheet": table.sheet, "provenance": {}}
         for key, aliases in ALIASES.items():
             value = table.get(row, *aliases)
+            ci = table.col(*aliases)
+            out["provenance"][key] = {
+                "source": "Факт продаж",
+                "sheet": table.sheet,
+                "row": ri,
+                "column": ci + 1 if ci is not None else None,
+                "header": table.paths[ci] if ci is not None else aliases[0],
+                "raw": str(value) if value is not None else None,
+            }
             if key in ("article", "code", "category", "kind", "assortment", "season"):
                 out[key] = str(value or "").strip()
             elif key.endswith("_date") or key == "second_actual":
@@ -266,7 +287,9 @@ def read_fact(table, season, articles):
                 ci = table.col(*aliases)
                 # Exported 1C TDSheet percentages are whole percentages, even 0 and 1.
                 out[key] = fraction(
-                    value, row[ci].fmt if ci is not None else "", whole=table.sheet == "TDSheet"
+                    value,
+                    row[ci].fmt if ci is not None else "",
+                    whole=ci is not None and "%" in table.headers[ci],
                 )
             else:
                 out[key] = number(value)
@@ -279,23 +302,28 @@ def read_fact(table, season, articles):
                 out["daily"][d] = number(row[i].value)
         for key, header in BOOLEAN_FIELDS.items():
             value = norm(table.get(row, header))
-            out[key] = True if value == "да" else False if value == "нет" else None
+            out[key] = True if value in ("да", "true") else False if value in ("нет", "false") else None
+            out["provenance"][key] = {
+                "source": "Факт продаж",
+                "sheet": table.sheet,
+                "row": ri,
+                "header": header,
+                "raw": value or None,
+            }
         out["line"] = str(table.get(row, "Линия", "Линейка") or "")
+        out["type"] = str(table.get(row, "Тип сезонности") or "")
         out["repricing_stage"] = str(table.get(row, "Этап переоценки") or "")
         out["planned_stores"] = number(table.get(row, "План магазинов"))
-        out["warehouse"] = (
-            sum(
-                number(table.get(row, header)) or 0
-                for header in (
-                    'Остатки "Основные Склады"',
-                    'Остатки "Основные Склады Казахстан"',
-                    'Остатки "Основные Склады Екатеринбург"',
-                    'Остатки "Основные Склады Новосибирск"',
-                )
-            )
-            if table.col('Остатки "Основные Склады"') is not None
-            else out["warehouse"]
+        warehouse_headers = (
+            'Остатки "Основные Склады"',
+            'Остатки "Основные Склады Казахстан"',
+            'Остатки "Основные Склады Екатеринбург"',
+            'Остатки "Основные Склады Новосибирск"',
         )
+        warehouse_values = [number(table.get(row, h)) for h in warehouse_headers if table.col(h) is not None]
+        if warehouse_values:
+            out["warehouse_known"] = sum(v for v in warehouse_values if v is not None)
+            out["warehouse"] = sum(warehouse_values) if all(v is not None for v in warehouse_values) else None
         if out["size_availability"] is None and out["sizes"] and out["avg_sizes"] is not None:
             out["size_availability"] = out["avg_sizes"] / out["sizes"]
         out["channel_distribution"] = {
@@ -321,6 +349,14 @@ def read_plans(table, category=False):
             "months": {},
             "month_mode": "units",
             "weekly_plan": {},
+            "invalid_months": False,
+            "target_raw": table.get(
+                row,
+                "% продаж к дате",
+                "Целевой процент реализации сезона",
+                "Целевой Sell-through",
+                "Target ST",
+            ),
             "target": fraction(
                 table.get(
                     row,
@@ -332,30 +368,62 @@ def read_plans(table, category=False):
             ),
             "entry": as_date(table.get(row, "Дата входа")),
             "type": str(table.get(row, "Тип сезонности") or ""),
-            "deadline": as_date(table.get(row, "Коммерческое окно", "Окончание окна")),
+            "deadline": window_end(table, row),
             "term": str(table.get(row, "Целевой срок реализации", "Нормативный срок реализации") or ""),
             "second_date": as_date(table.get(row, "Дата 2-й поставки", "Дата второй поставки")),
             "second_qty": number(table.get(row, "2-я партия", "Объём 2-й поставки", "Объем 2-й поставки")),
             "monthly_discount": {},
             "monthly_markup": {},
+            "monthly_margin": {},
+            "monthly_price": {},
+            "monthly_revenue": {},
+            "monthly_cost": {},
+            "monthly_sources": {},
+            "norms": norms.read(table, row, ri),
+            "source_sheet": table.sheet,
         }
         modes = {"pct": {}, "units": {}, "cumulative": {}}
         for ci, path in enumerate(table.paths):
             month = month_of(table.headers[ci])
             p = norm(path)
             if month:
-                if "скидк" in p:
-                    item["monthly_discount"][month] = fraction(row[ci].value, row[ci].fmt)
-                elif "markup" in p or "наценк" in p:
-                    item["monthly_markup"][month] = number(row[ci].value)
-                elif any(w in p for w in ("выручк", "себестоим", "цена")):
-                    continue
+                economic = next(
+                    (
+                        k
+                        for word, k in (
+                            ("скидк", "discount"),
+                            ("markup", "markup"),
+                            ("наценк", "markup"),
+                            ("маржа", "margin"),
+                            ("выручк", "revenue"),
+                            ("себестоим", "cost"),
+                            ("цена", "price"),
+                        )
+                        if word in p
+                    ),
+                    None,
+                )
+                if economic:
+                    item["monthly_" + economic][month] = (
+                        fraction(row[ci].value, row[ci].fmt)
+                        if economic in ("discount", "margin")
+                        else number(row[ci].value)
+                    )
+                    item["monthly_sources"][f"{economic}:{month}"] = {
+                        "sheet": table.sheet,
+                        "row": ri,
+                        "column": ci + 1,
+                        "header": path,
+                        "raw": str(row[ci].value) if row[ci].value is not None else None,
+                    }
                 elif "накопительн" in p:
                     modes["cumulative"][month] = fraction(row[ci].value, row[ci].fmt)
                 elif "%" in p or "%" in row[ci].fmt:
                     modes["pct"][month] = fraction(row[ci].value, row[ci].fmt)
                 elif not category or "проданным единицам" in p:
                     modes["units"][month] = number(row[ci].value)
+                if not economic and norm(row[ci].value) and number(row[ci].value) is None:
+                    item["invalid_months"] = True
             if "план неделя" in p and (m := re.search(r"неделя\s+(\d+)\s+(\d{4})", p)):
                 try:
                     d = date.fromisocalendar(int(m[2]), int(m[1]), 1)
@@ -379,6 +447,7 @@ def read_plans(table, category=False):
             category
             and item["target"] is None
             and item["month_mode"] == "pct"
+            and set(item["months"]) == {9, 10, 11, 12, 1, 2}
             and all(v is not None for v in item["months"].values())
         ):
             item["target"] = sum(item["months"].values())
@@ -388,3 +457,15 @@ def read_plans(table, category=False):
 
 def duplicate_keys(rows, key):
     return {k for k, n in Counter(key(r) for r in rows).items() if k and n > 1}
+
+
+def window_end(table, row):
+    explicit = as_date(table.get(row, "Окончание окна", "Дата окончания реализации"))
+    if explicit:
+        return explicit
+    window = table.get(row, "Коммерческое окно")
+    matches = re.findall(r"\d{4}-\d{2}-\d{2}|\d{2}\.\d{2}\.\d{4}", str(window or ""))
+    if len(matches) == 2:
+        first, last = map(as_date, matches)
+        return last if first and last and first <= last else None
+    return as_date(window) if len(matches) <= 1 and not norm(window).startswith("с ") else None

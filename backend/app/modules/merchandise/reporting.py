@@ -13,6 +13,7 @@ ARTICLE_COLUMNS = [
     ("kind", "Вид номенклатуры"),
     ("assortment", "Вид ассортимента"),
     ("type", "Тип сезонности"),
+    ("strategy_label", "Стратегия оценки"),
     ("entry", "Дата входа"),
     ("age", "Возраст, дней"),
     ("base", "Начальный остаток"),
@@ -42,6 +43,7 @@ ARTICLE_COLUMNS = [
     ("recommendation", "Рекомендация"),
     ("owner", "Ответственный"),
     ("review_date", "Контрольная дата"),
+    ("review_window", "Окно проверки без утверждённой даты"),
     ("stock", "Остаток"),
     ("weeks_remaining", "Недель до срока"),
     ("sizes", "Размеров всего"),
@@ -92,6 +94,10 @@ PRICING_COLUMNS = [
     ("change", "Предлагаемое изменение"),
     ("reason", "Причина"),
     ("review_date", "Контрольная дата"),
+    ("review_window", "Окно проверки"),
+    ("review_limitation", "Ограничение срока"),
+    ("norms_text", "Применённые экономические нормативы"),
+    ("economics_text", "Сопоставление экономики и ограничения"),
 ]
 SECOND_COLUMNS = [
     ("article", "Артикул"),
@@ -103,6 +109,7 @@ SECOND_COLUMNS = [
     ("second_date", "Дата 2-й поставки"),
     ("second_qty", "Объём 2-й поставки"),
     ("weeks", "Недель до поставки"),
+    ("completed_weeks", "Завершённых недель в оценке темпа"),
     ("required", "Требуемый темп, ед./нед."),
     ("pace", "Текущий темп, ед./нед."),
     ("pace_ratio", "Фактический темп / требуемый, %"),
@@ -111,6 +118,8 @@ SECOND_COLUMNS = [
     ("gap", "Отклонение"),
     ("decision", "Решение"),
     ("comment", "Комментарий"),
+    ("scenario_forecast", "Условный прогноз без подтверждения партии, ед."),
+    ("scenario_risk", "Условный недобор без подтверждения партии"),
 ]
 ACTION_COLUMNS = [
     ("priority", "Приоритет"),
@@ -120,6 +129,9 @@ ACTION_COLUMNS = [
     ("owner", "Ответственный"),
     ("review_date", "Контрольная дата"),
     ("expected", "Ожидаемый результат"),
+    ("review_window", "Окно проверки"),
+    ("evidence_text", "Доказательства диагноза"),
+    ("missing_evidence", "Недостающие доказательства"),
 ]
 QA_COLUMNS = [
     ("severity", "Уровень"),
@@ -217,6 +229,11 @@ def export(result, sections, path):
                 "change",
                 "conclusion",
                 "label",
+                "norms_text",
+                "economics_text",
+                "evidence_text",
+                "missing_evidence",
+                "review_limitation",
             ):
                 width = 42
             ws.column_dimensions[get_column_letter(ci)].width = width

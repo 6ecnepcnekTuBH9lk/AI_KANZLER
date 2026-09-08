@@ -18,7 +18,7 @@ def sales_window(fact, start, control, end):
         needed = list(days(start, stop))
         official = (
             sum(daily[d] for d in needed)
-            if all(d in daily and daily[d] is not None for d in needed)
+            if needed and all(d in daily and daily[d] is not None for d in needed)
             else None
         )
         prior = [v for d, v in daily.items() if d < start and d <= control]
@@ -117,20 +117,15 @@ def deadline_for(plan, entry, end):
     if plan and plan.get("deadline"):
         return min(end, plan["deadline"])
     if plan and plan.get("term") and plan.get("entry"):
-        m = re.search(r"(\d+)\s*(месяц|дн)", plan["term"].lower())
+        m = re.fullmatch(r"\s*(\d+)\s*(месяц(?:а|ев)?|дн(?:я|ей)?)\s*", plan["term"].lower())
         if m:
             d = (
                 add_months(plan["entry"], int(m[1]))
-                if m[2] == "месяц"
+                if m[2].startswith("месяц")
                 else plan["entry"] + timedelta(days=int(m[1]))
             )
             return min(end, d)
-    # Corporate maximum; the actual delivery never shifts an explicit approved deadline.
-    origin = plan.get("entry") if plan and plan.get("entry") else entry
-    if origin:
-        suit = plan and "костюм" in plan.get("category", "").lower()
-        return min(end, origin + timedelta(days=180) if suit else add_months(origin, 6))
-    return end
+    return None
 
 
 def calculate(fact, plan, trajectory, control, start, end, plan_pct, plan_units):
@@ -147,22 +142,24 @@ def calculate(fact, plan, trajectory, control, start, end, plan_pct, plan_units)
         qa.append("Дата входа позже контрольной даты.")
         age = None
     deadline = deadline_for(plan, entry, end)
-    if plan and not plan.get("deadline") and not plan.get("term"):
+    if deadline is None:
         qa.append(
-            "Специальный срок реализации не указан: применена верхняя граница корпоративного срока, ограниченная концом сезона."
+            "Нет однозначного нормативного срока реализации: точка из корпоративного диапазона не выбирается. Требуемый темп и прогноз к сроку не рассчитаны."
         )
-    remaining = max(0, (deadline - min(control, end)).days / 7)
+    remaining = max(0, (deadline - min(control, end)).days / 7) if deadline else None
     target_units = trajectory["season_units"] if trajectory else None
     required = None
-    if target_units is not None and official is not None:
+    if target_units is not None and official is not None and remaining is not None:
         gap = max(0, target_units - official)
         required = 0.0 if gap == 0 else gap / remaining if remaining > 0 else None
         if gap and remaining == 0:
             qa.append("Срок реализации завершён, целевой объём не достигнут.")
     forecast = (
-        (official + pace["pace"] * remaining) if official is not None and pace["pace"] is not None else None
+        (official + pace["pace"] * remaining)
+        if official is not None and pace["pace"] is not None and remaining is not None
+        else None
     )
-    if control >= deadline and official is not None:
+    if deadline and control >= deadline and official is not None:
         forecast = official
     base = fact["base"]
     valid_base = base if base is not None and base > 0 else None
@@ -173,6 +170,15 @@ def calculate(fact, plan, trajectory, control, start, end, plan_pct, plan_units)
     cover = ratio(fact["stock"], pace["pace"])
     if pace["pace"] == 0:
         qa.append("Покрытие запасом не рассчитывается при нулевом устойчивом темпе.")
+    gmroi = (
+        ratio(fact.get("gross_profit"), fact.get("avg_cost_stock"))
+        if fact.get("gmroi_scope_ok") is True
+        else None
+    )
+    if fact.get("gross_profit") is not None and gmroi is None:
+        qa.append(
+            "Доходность товарного капитала не рассчитана: нужны средний запас по себестоимости и подтверждение одинакового периода/состава данных."
+        )
     return {
         **pace,
         "season_fact": official,
@@ -198,7 +204,7 @@ def calculate(fact, plan, trajectory, control, start, end, plan_pct, plan_units)
         "forecast_st": ratio(forecast, valid_base),
         "age": age,
         "entry": entry.isoformat() if entry else None,
-        "deadline": deadline.isoformat(),
+        "deadline": deadline.isoformat() if deadline else None,
         "weeks_remaining": remaining,
-        "gmroi": ratio(fact.get("gross_profit"), fact.get("avg_cost_stock")),
+        "gmroi": gmroi,
     }, qa

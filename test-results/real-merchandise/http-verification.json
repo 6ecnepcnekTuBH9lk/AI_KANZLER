@@ -1,0 +1,11 @@
+{
+  "job_id": "a942e81d35744f30af79980e26187678",
+  "inputs_sha256": {
+    "ОЗ26_W33_план_сезона 28.08+фото.xlsx": "18185970fd06c1fbe9c954f1baca97f8fbbab497a1d6f34c99da3b0defe168c6",
+    "План сезона ОЗ 26-27 из ценообразования.xlsx": "0997a908cbdae10a457a4644abaf4c2560ad6742adce2efcc706d79bd1860446",
+    "Анализ продаж (Общий) (XLSX) 2026-09-06.xlsx": "bd1f147b6d8761cdae677c1a9555f10e20529f64e4d2633832579f23cf823d9c"
+  },
+  "article_count": 338,
+  "golden_matches": true,
+  "output": "C:\\Users\\Ermolenko.i\\PycharmProjects\\KANZLER_AI\\test-results\\real-merchandise\\KANZLER_Контроль_ассортимента_2026-09-06.xlsx"
+}

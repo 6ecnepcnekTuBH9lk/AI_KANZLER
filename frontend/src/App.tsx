@@ -330,12 +330,46 @@ function Details({
               ["cover", "Покрытие, недель"],
               ["deadline", "Срок реализации"],
               ["review_date", "Дата проверки"],
+              ["strategy_label", "Стратегия оценки"],
+              ["review_window", "Окно проверки"],
             ].map(([key, label]) => ({
               key,
               label,
               children: format(row[key], key),
             }))}
           />
+          <Title level={5}>Основания диагноза</Title>
+          {(row.diagnosis?.evidence || []).map((item: DataRow, i: number) => (
+            <div key={i}>
+              <strong>{item.diagnosis}</strong>
+              <p>{item.rule}</p>
+              <ResultTable
+                rows={item.inputs || []}
+                schema={[
+                  ["label", "Показатель"],
+                  ["value", "Значение"],
+                  ["source", "Источник"],
+                  ["sheet", "Лист"],
+                  ["row", "Строка"],
+                ]}
+              />
+            </div>
+          ))}
+          <p>{(row.diagnosis?.missing_evidence || []).join(" ")}</p>
+          <Title level={5}>Экономические нормативы</Title>
+          <p>{row.norms_text || "Точные нормативы в источниках не найдены"}</p>
+          <ResultTable
+            rows={row.economics || []}
+            schema={[
+              ["label", "Показатель"],
+              ["actual_text", "Факт"],
+              ["norm_text", "Норматив"],
+              ["difference_text", "Отклонение"],
+              ["source", "Источник"],
+              ["comment", "Ограничение"],
+            ]}
+          />
+          <p>{row.cover_interpretation}</p>
           <Title level={5}>Накопительный план реализации</Title>
           {row.weekly_plan?.length ? (
             <div className="chart">

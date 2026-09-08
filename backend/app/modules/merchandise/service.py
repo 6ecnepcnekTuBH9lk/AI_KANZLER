@@ -1,7 +1,16 @@
 from collections import defaultdict
 
 from app.core.exceptions import InputError
-from app.modules.merchandise import decisions, history, importers, metrics, planning, reporting
+from app.modules.merchandise import (
+    decisions,
+    evidence,
+    history,
+    importers,
+    metrics,
+    norms,
+    planning,
+    reporting,
+)
 from app.shared.excel import norm
 
 
@@ -39,6 +48,8 @@ def run(files, options, output_dir, progress, sessions=None):
     processed = set()
     for i, f in enumerate(facts):
         article = f["article"]
+        for detail in f["provenance"].values():
+            detail["file"] = roles["fact"][0].original_name
         if article in processed:
             continue
         processed.add(article)
@@ -81,6 +92,27 @@ def run(files, options, output_dir, progress, sessions=None):
         pct, units = planning.plan_at(trajectory, f["base"], control, start, end)
         m, metric_notes = metrics.calculate(f, p, trajectory, control, start, end, pct, units)
         notes += metric_notes
+        m["norms"] = norms.resolve(p, cat, control.month)
+        m["strategy"] = norms.strategy(f, p)
+        m["economics"] = norms.comparisons(f, m["norms"], m)
+        m["cover_interpretation"] = norms.cover_interpretation(f, m, m["norms"], m["strategy"])
+        if m["strategy"]["limitation"]:
+            notes.append(m["strategy"]["limitation"])
+        if "observation_days" not in m["norms"]:
+            notes.append(
+                "Не задан утверждённый срок основной оценки: значение из диапазона наблюдения не выбирается; ХИТ/АУТСАЙДЕР ограничены."
+            )
+        for key, detail in m["norms"].items():
+            if detail.get("invalid"):
+                notes.append(
+                    "Некорректный явный норматив «"
+                    + norms.LABELS[key]
+                    + "»; категорийная замена не выполнена."
+                )
+        if f.get("warehouse") is None and f.get("warehouse_known") is not None:
+            notes.append(
+                "Часть складских остатков отсутствует; известная часть не выдана за полный складской остаток."
+            )
         if critical:
             for key in (
                 "season_fact",
@@ -110,6 +142,17 @@ def run(files, options, output_dir, progress, sessions=None):
             if f.get(key) is None:
                 notes.append(f"Отсутствует показатель: {label}.")
         operations = decisions.operational_evidence(f, m, p)
+        m["operational_risk"] = any(
+            f.get(k) is True
+            for k in (
+                "replenishment_needed",
+                "stop_needed",
+                "stores_reduction_needed",
+                "warehouse_transfer_needed",
+                "alternate_channel_needed",
+                "warehouse_skew_confirmed",
+            )
+        )
         unknown = [label for key, label in decisions.OPERATION_ORDER if operations[key] is None]
         if unknown:
             notes.append(
@@ -124,8 +167,26 @@ def run(files, options, output_dir, progress, sessions=None):
                 notes.append(second["comment"])
         s = decisions.status(m, operations, second, control, start, p, critical)
         causes = decisions.diagnose(f, m, p, operations, second, s)
+        notes += causes["missing_evidence"]
         price = decisions.pricing(f, m, p, s, operations, second, control)
+        if price["review_limitation"] and price["decision"] in (
+            "снизить цену",
+            "повысить цену",
+            "уменьшить скидку",
+        ):
+            notes.append(price["review_limitation"])
         action = decisions.recommend(f, m, p, s, causes, operations, price, second, control)
+        action.update(
+            evidence_text=evidence.display(causes), missing_evidence=" ".join(causes["missing_evidence"])
+        )
+        price["norms_text"] = norms.display(m["norms"])
+        price["economics_text"] = (
+            "; ".join(
+                f"{x['label']}: факт {x['actual_text']}, норматив {x['norm_text']}, отклонение {x['difference_text']}"
+                for x in m["economics"]
+            )
+            + ". Наценка, маржа, доходность и оборачиваемость требуют сверки периода и состава товаров."
+        )
         historical = history.context(f, control)
         if not historical["weekly_shares"]:
             notes.append(historical["text"])
@@ -165,11 +226,20 @@ def run(files, options, output_dir, progress, sessions=None):
             "assortment": f["assortment"],
             "type": p["type"] if p else None,
             "status": s,
-            "primary_cause": causes[0],
-            "secondary_cause": causes[1],
+            "primary_cause": causes["primary"],
+            "secondary_cause": causes["secondary"],
+            "diagnosis": causes,
+            "input_provenance": f["provenance"],
+            "norms_text": price["norms_text"],
+            "strategy_label": m["strategy"]["label"],
+            "plan_sources": {
+                "article": {"sheet": p.get("source_sheet"), "row": p.get("source_row")} if p else None,
+                "category": {"sheet": cat.get("source_sheet"), "row": cat.get("source_row")} if cat else None,
+            },
             "recommendation": action["recommendation"],
             "owner": action["owner"],
             "review_date": action["review_date"],
+            "review_window": action["review_window"],
             "warehouse_share": metrics.ratio(f["warehouse"], f["stock"]),
             "historical_text": historical["text"],
             "historical": historical,
@@ -246,12 +316,15 @@ def run(files, options, output_dir, progress, sessions=None):
         "Прогноз продаж, ед.": summary["forecast"],
         **counts,
         "Риски второй поставки": sum(s["risk"] for s in sections["second-wave"]),
+        "Условные риски второй поставки без подтверждения партии": sum(
+            s["scenario_risk"] for s in sections["second-wave"]
+        ),
         "Кандидаты на повышение цены": sum(
             p["decision"] in ("повысить цену", "уменьшить скидку") for p in sections["pricing"]
         ),
         "Кандидаты на снижение цены": sum(p["decision"] == "снизить цену" for p in sections["pricing"]),
         "Артикулы с проблемой размеров": sum(
-            a["primary_cause"] == "выбитые размеры" for a in sections["articles"]
+            a["diagnosis"]["sizes"]["problem"] for a in sections["articles"]
         ),
         "Артикулы с проблемой распределения": sum(
             a["primary_cause"] == "ошибочное распределение" for a in sections["articles"]

@@ -48,7 +48,7 @@ def test_article_priority_category_fallback_and_missing_plan(article_plan):
     a, _ = planning.build_plan(article_plan, category, 1000, START, END)
     b, _ = planning.build_plan(article_plan, None, 1000, START, END)
     assert a == b
-    assert planning.build_plan(None, category, 1000, START, END)[0] is None
+    assert planning.build_plan(None, category, 1000, START, END)[0]["season_units"] == 700
     article_plan["months"] = {}
     c, qa = planning.build_plan(article_plan, category, 1000, START, END)
     assert c and qa
@@ -83,6 +83,7 @@ def test_partial_week_pace_and_zero(merchandise_fact):
 
 
 def test_required_forecast_cover_st(merchandise_fact, article_plan):
+    article_plan["deadline"] = END
     merchandise_fact["weekly"][date(2026, 8, 31)] = 70
     p, _ = planning.build_plan(article_plan, None, 1000, START, END)
     pct, units = planning.plan_at(p, 1000, date(2026, 10, 4), START, END)
@@ -113,10 +114,11 @@ def test_required_forecast_cover_st(merchandise_fact, article_plan):
 def test_status_boundaries(execution, expected, article_plan):
     m = {
         "age": 35,
+        "norms": {"observation_days": {"value": 28}},
         "execution": execution,
         "deadline": END.isoformat(),
         "pace": 10,
-        "forecast": 600 if execution < 0.70 else 700,
+        "forecast": 600 if execution < 0.70 else 800 if execution >= 1.15 else 700,
         "season_plan": 700,
         "season_pace_weeks": 4,
     }
@@ -127,6 +129,7 @@ def test_status_boundaries(execution, expected, article_plan):
 def test_status_observation_forecast_sizes_preseason(article_plan):
     m = {
         "age": 35,
+        "norms": {"observation_days": {"value": 28}},
         "execution": 1.0,
         "deadline": END.isoformat(),
         "pace": 10,
@@ -145,6 +148,7 @@ def test_status_observation_forecast_sizes_preseason(article_plan):
 
 
 def test_second_wave_base_and_post_arrival(merchandise_fact, article_plan):
+    merchandise_fact["second_actual"] = date(2026, 12, 1)
     article_plan.update(second_date=date(2026, 12, 1), second_qty=500)
     m = {"base": 1000, "pace": 20, "season_fact": 200, "preseason": 100, "cover": 30}
     wave = decisions.second_wave(merchandise_fact, m, article_plan, date(2026, 10, 1), END)
@@ -160,6 +164,9 @@ def test_pricing_operations_order_and_no_automatic_discount(merchandise_fact, ar
     p = decisions.pricing(merchandise_fact, m, article_plan, "РИСК", ops, None, date(2026, 10, 4))
     assert p["decision"] == "наблюдать" and "представленность" in p["reason"]
     ops = {k: True for k, l in decisions.OPERATION_ORDER}
+    p = decisions.pricing(merchandise_fact, m, article_plan, "РИСК", ops, None, date(2026, 10, 4))
+    assert p["decision"] == "проверить данные" and "предел" in p["reason"]
+    m["norms"] = {"max_discount": {"value": 0.4}}
     p = decisions.pricing(merchandise_fact, m, article_plan, "РИСК", ops, None, date(2026, 10, 4))
     assert p["decision"] == "снизить цену" and "40%" in p["change"]
     merchandise_fact["repricing_date"] = date(2026, 9, 15)
@@ -229,6 +236,7 @@ def test_early_plan_deadline_is_not_extended(article_plan):
 def test_high_preseason_pace_does_not_confirm_hit(article_plan):
     m = {
         "age": 35,
+        "norms": {"observation_days": {"value": 28}},
         "execution": 1.2,
         "deadline": END.isoformat(),
         "pace": 100,
