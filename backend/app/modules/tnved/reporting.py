@@ -99,12 +99,22 @@ def patch_workbook(source, destination, edits, added_columns):
                     cols = etree.Element(tag("cols"))
                     root.insert(list(root).index(data), cols)
                 for ci, width in extra.items():
+                    # Reuse an exact column definition on repeat exports.
+                    existing_col = next(
+                        (c for c in cols if c.get("min") == str(ci) and c.get("max") == str(ci)), None
+                    )
+                    if existing_col is not None:
+                        existing_col.set("width", str(width))
+                        existing_col.set("customWidth", "1")
+                        continue
                     etree.SubElement(
                         cols, tag("col"), min=str(ci), max=str(ci), width=str(width), customWidth="1"
                     )
                 dim = root.find(tag("dimension"))
                 if dim is not None:
-                    dim.set("ref", f"A1:{get_column_letter(max(extra))}{max(rows)}")
+                    old_col, old_row = coordinate_from_string(dim.get("ref").split(":")[-1])
+                    last_col = max(max(extra), column_index_from_string(old_col))
+                    dim.set("ref", f"A1:{get_column_letter(last_col)}{max(max(rows), old_row)}")
             parts[path] = etree.tostring(root, xml_declaration=True, encoding="UTF-8", standalone=True)
             changed.add(path)
         if new_styles:

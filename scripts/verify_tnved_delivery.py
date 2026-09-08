@@ -26,12 +26,27 @@ def main():
     destination = OUT / (source.stem + "_с_кодами_ТНВЭД.xlsx")
     assert source.resolve() != destination.resolve()
     assert hashlib.sha256(source.read_bytes()).hexdigest() == baseline["sha256"]
-    assert (
-        hashlib.sha256((source.parent / expected["skill_file"]).read_bytes()).hexdigest()
-        == expected["skill_sha256"]
-    )
     before = baseline["app_before"]["sections"]["items"]
-    skill = baseline["previous_files"][1]["rows"]
+    historical_skill = baseline["previous_files"][1]["rows"]
+    skill_path = source.parent / expected["skill_file"]
+    if not skill_path.exists():
+        skill_path = source.parent / "Коды ТНВЭД скилл.xlsx"
+    skill_sha = hashlib.sha256(skill_path.read_bytes()).hexdigest()
+    book = load_workbook(skill_path, data_only=False)
+    values = list(book.active.values)
+    skill = [dict(zip(values[0], row, strict=True)) for row in values[1:]]
+    book.close()
+    assert len(skill) == len(historical_skill) == 57
+    # A refreshed user-format copy may change comments/source headers, never goods or codes.
+    for current, historical in zip(skill, historical_skill, strict=True):
+        for key in baseline["rows"][0]:
+            assert str(current.get(key) or "") == str(historical.get(key) or ""), key
+    followup_path = OUT / "followup-before.json"
+    followup_before = (
+        {r["row"]: r for r in json.loads(followup_path.read_text(encoding="utf-8"))}
+        if followup_path.exists()
+        else {}
+    )
     rows, changed, differences = [], [], []
     for raw, actual, old, previous, target in zip(
         baseline["rows"], items, before, skill, expected["rows"], strict=True
@@ -76,6 +91,11 @@ def main():
                 "missing_rule": actual["missing_rule"],
                 "classifier_limitation": actual["missing_rule"],
                 "unresolved_reason": actual["comment"],
+                "user_comment": actual["user_comment"],
+                "source_url": actual["source_url"],
+                "skill_comment": previous.get("Комментарий") or "",
+                "skill_source": previous.get("Источник") or previous.get("Источник Alta.ru") or "",
+                "followup_before": followup_before.get(actual["row"]),
                 "alta_candidates": actual["candidates"],
                 "evidence": actual["evidence"],
                 "source_evidence": actual["source_evidence"],
@@ -93,7 +113,8 @@ def main():
         ]
         prior_cells = {c.get("r"): c for c in original.findall("s:sheetData/s:row/s:c", NS)}
         after_cells = {c.get("r"): c for c in result.findall("s:sheetData/s:row/s:c", NS)}
-        permitted = {"F" + str(i["row"]) for i in items}
+        # The export normalizes the requested code header as well as its values.
+        permitted = {"F1"} | {"F" + str(i["row"]) for i in items}
         for coordinate, cell in prior_cells.items():
             if coordinate not in permitted or cell.find("s:f", NS) is not None:
                 assert etree.tostring(cell) == etree.tostring(after_cells[coordinate]), coordinate
@@ -108,25 +129,49 @@ def main():
         assert all(etree.tostring(x) == etree.tostring(new_xfs[i]) for i, x in enumerate(old_xfs))
     wb = load_workbook(destination, data_only=False)
     ws = wb.active
+    assert ws.max_column == 13
+    assert ws.cell(1, 12).value == "Комментарий"
+    assert ws.cell(1, 13).value == "Источник"
     for actual in items:
         cell = ws.cell(actual["row"], 6)
         assert (cell.value or None) == actual["code"]
         if actual["code"]:
             assert cell.data_type == "s" and cell.number_format == "@"
-        else:
-            assert ws.cell(actual["row"], 12).value == actual["comment"]
+        comment = actual["user_comment"]
+        assert len(comment) <= 180 and comment.count(".") <= 2
+        assert (ws.cell(actual["row"], 12).value or "") == comment
+        url = f"https://www.alta.ru/tnved/code/{actual['code']}/" if actual["code"] else ""
+        assert actual["source_url"] == url
+        assert (ws.cell(actual["row"], 13).value or "") == url
+        assert bool(comment) == (not actual["code"])
     wb.close()
     counts = Counter(r["reason_category"] for r in rows if r["semantic_status"] == "UNRESOLVED")
     summary = {
         "baseline_rows": 57,
         "original_empty_codes": 57,
         "skill_confirmed": 23,
+        "skill_file_checked": str(skill_path),
+        "skill_sha256_checked": skill_sha,
+        "skill_historical_sha256": expected["skill_sha256"],
+        "skill_goods_and_codes_match_historical": True,
         "app_before_confirmed": 13,
         "app_after_confirmed": sum(bool(r["app_after"]) for r in rows),
         "unresolved": sum(not r["app_after"] for r in rows),
         "reason_categories": dict(counts),
         "changed_from_app_before": changed,
         "different_from_skill": differences,
+        "source_header": "Источник",
+        "source_urls": sum(bool(r["source_url"]) for r in rows),
+        "source_errors": sum(i["status"] == "Техническая ошибка" for i in items),
+        "followup_changed_codes": [
+            r["row"] for r in rows if r["followup_before"] and r["followup_before"]["code"] != r["app_after"]
+        ],
+        "skill_format_comparison": {
+            "rows_checked": len(rows),
+            "same_comment": sum(r["skill_comment"] == r["user_comment"] for r in rows),
+            "same_source": sum(r["skill_source"] == r["source_url"] for r in rows),
+            "comments_written": sum(bool(r["user_comment"]) for r in rows),
+        },
         "shoe_confirmed": sum(bool(r["app_after"]) for r in rows if r["features"]["kind"] == "обувь"),
         "shoe_unresolved": sum(not r["app_after"] for r in rows if r["features"]["kind"] == "обувь"),
         "source_sha256": baseline["sha256"],
@@ -145,8 +190,11 @@ def main():
         "# ТН ВЭД: сравнение 57 строк",
         "",
         "Эталон Skill: файл с 23 кодами, подтверждён пользователем. Источник решений — актуальная Alta; сохранённые карточки используются только в offline regression.",
+        f"Пользовательский формат сверяется с текущим файлом «{skill_path.name}». Все 57 товаров и коды совпали с историческим снимком; комментарии и оформление источника читаются из текущего файла. SHA256 текущего файла: {skill_sha}; исторического: {expected['skill_sha256']}.",
         "",
-        "| Строка | Код / Артикул | Skill | До | После | Причина / решение |",
+        "Точечная доработка: 17 → 19 подтверждений, 40 → 38 уточнений. Изменились только коды строк 18–19; остальные 17 подтверждений сохранены. Историческое «До» ниже относится к более раннему baseline из commit 787c689 (13 подтверждений).",
+        "",
+        "| Строка | Код / Артикул | Skill | До (исторический baseline) | После | Причина / решение |",
         "|---|---|---|---|---|---|",
     ]
     for row in rows:
@@ -156,11 +204,49 @@ def main():
         )
     markdown += [
         "",
-        "Изменились относительно приложения: " + ", ".join(map(str, changed)) + ".",
+        "Изменились относительно исторического baseline: " + ", ".join(map(str, changed)) + ".",
         "Отличаются от Skill: " + ", ".join(map(str, differences)) + ".",
         "",
-        "A — отсутствовало правило; B — ошибка извлечения; C — не исследована ветвь; D — не хватает входных данных; E — прежнее недоказанное предположение. Шесть отличий от Skill относятся к E; для доказательства кода по-прежнему не хватает данных.",
+        "A — отсутствовало правило; B — ошибка извлечения; C — не исследована ветвь; D — не хватает входных данных; E — прежнее недоказанное предположение. Четыре отличия от Skill относятся к E: назначение изделий в строках 24–27 не доказано.",
+        "",
+        "## Пользовательский формат: построчная сверка со Skill",
+        "",
+        "Во всех 57 строках сверены код, комментарий и источник. Комментарий запрашивает ближайший необходимый признак; полная проверка условий остаётся в UI/API. У UNRESOLVED источник намеренно пуст, даже если Skill приводил обзорную страницу группы. У CONFIRMED комментарий пуст, источник — прямая карточка кода.",
+        "",
+        "| Строка | Комментарий Skill | Комментарий Excel | Источник Skill | Источник Excel |",
+        "|---|---|---|---|---|",
     ]
+
+    def cell_text(value):
+        return str(value or "—").replace("|", "\\|").replace("\n", " ")
+
+    for row in rows:
+        markdown.append(
+            "| "
+            + " | ".join(
+                cell_text(row[k])
+                for k in ("row", "skill_comment", "user_comment", "skill_source", "source_url")
+            )
+            + " |"
+        )
+    if followup_before:
+        markdown += [
+            "",
+            "## Изменения относительно предыдущих 17 подтверждений",
+            "",
+            "Изменились коды в строках: " + ", ".join(map(str, summary["followup_changed_codes"])) + ".",
+            "",
+            "| Строка | Комментарий до | Комментарий после |",
+            "|---|---|---|",
+        ]
+        for row in rows:
+            markdown.append(
+                "| "
+                + " | ".join(
+                    cell_text(v) for v in (row["row"], row["followup_before"]["comment"], row["user_comment"])
+                )
+                + " |"
+            )
     (OUT / "skill-comparison-57.md").write_text("\n".join(markdown) + "\n", encoding="utf-8")
     print(json.dumps(summary, ensure_ascii=False, indent=2))
 

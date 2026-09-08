@@ -11,7 +11,17 @@ MATERIALS = {
     "кашемир": ("кашемир", "cashmere"),
     "шелк": ("шелк", "silk"),
     "лен": (r"\bлен\b", "льн", "linen"),
-    "искусственные": ("лиоцелл", "вискоз", "модал", "lyocell", "viscose", "modal", "ацетат"),
+    "искусственные": (
+        "лиоцелл",
+        "вискоз",
+        "модал",
+        "lyocell",
+        "viscose",
+        "modal",
+        "ацетат",
+        "tencel",
+        "тенсел",
+    ),
     "синтетические": (
         "полиэстер",
         "полиамид",
@@ -70,7 +80,7 @@ class Features:
     def signature(self):
         data = asdict(self)
         data.pop("parts")
-        data["policy"] = "tnved-2026-09-08-v2"
+        data["policy"] = "tnved-2026-09-08-v3"
         # Main material text is normalized semantically; retain unknown composition to avoid unsafe merging.
         if self.composition and self.material is not None:
             data.pop("main_text")
@@ -237,6 +247,8 @@ def extract_features(row):
         sole = re.search(r"подошва\s*[:\-]\s*([^;]+)", composition_text)
         if upper:
             details.setdefault("материал верха", upper[1])
+        elif inferred_upper := structured_shoe_upper(composition_text):
+            details.setdefault("материал верха", inferred_upper)
         if sole:
             details.setdefault("материал подошвы", sole[1])
         for key in (
@@ -268,6 +280,26 @@ def extract_features(row):
         sections,
         conflicts,
     )
+
+
+def structured_shoe_upper(text):
+    """Infer only a single unlabelled material followed by labelled shoe parts."""
+    segments = [s.strip() for s in text.split(";") if s.strip()]
+    if len(segments) < 3 or re.search(r"[:;,/]|\s[-–—]\s|\b(?:или|либо)\b", segments[0]):
+        return None
+    labelled = [re.fullmatch(r"(подкладка|стелька|подошва)\s*[:\-]\s*(.+)", s) for s in segments[1:]]
+    if not all(labelled):
+        return None
+    labels = [m[1] for m in labelled]
+    if len(set(labels)) != len(labels) or "подошва" not in labels:
+        return None
+    # A prose description or several unlabelled materials is not an upper declaration.
+    if not re.fullmatch(
+        r"(?:натуральная (?:кожа|замша)|композиционная кожа|искусственная кожа|текстиль|резина|пластмасса)",
+        segments[0],
+    ):
+        return None
+    return segments[0]
 
 
 def boolean(value):

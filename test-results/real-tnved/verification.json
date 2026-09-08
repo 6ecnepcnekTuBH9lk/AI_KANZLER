@@ -2,15 +2,19 @@
   "baseline_rows": 57,
   "original_empty_codes": 57,
   "skill_confirmed": 23,
+  "skill_file_checked": "C:\\Users\\Ermolenko.i\\Downloads\\Коды ТНВЭД скилл.xlsx",
+  "skill_sha256_checked": "c8ef19804a7f53e811e9a9908e311a452f228cc1b6235ea3a2b9cd3a1b2f3388",
+  "skill_historical_sha256": "c7f75de4d88e2e0c8d0966aa487a2d1748aa7b28fe4e3a3fd6320a7c08450f1b",
+  "skill_goods_and_codes_match_historical": true,
   "app_before_confirmed": 13,
-  "app_after_confirmed": 17,
-  "unresolved": 40,
+  "app_after_confirmed": 19,
+  "unresolved": 38,
   "reason_categories": {
     "SHOE_MATERIALS": 8,
-    "UNKNOWN_FIBER": 19,
-    "DENIM_AND_USE": 2,
+    "DENIM_AND_USE": 3,
     "PROFESSIONAL_USE": 4,
     "SHOE_CONSTRUCTION": 4,
+    "UNKNOWN_FIBER": 16,
     "KNIT_DENSITY_AND_COLLAR": 3
   },
   "changed_from_app_before": [
@@ -25,17 +29,28 @@
     54
   ],
   "different_from_skill": [
-    18,
-    19,
     24,
     25,
     26,
     27
   ],
+  "source_header": "Источник",
+  "source_urls": 19,
+  "source_errors": 0,
+  "followup_changed_codes": [
+    18,
+    19
+  ],
+  "skill_format_comparison": {
+    "rows_checked": 57,
+    "same_comment": 26,
+    "same_source": 53,
+    "comments_written": 38
+  },
   "shoe_confirmed": 0,
   "shoe_unresolved": 12,
   "source_sha256": "d72bbd00df20b520b4cea2fe876981a0dd87f6f6931b08f5267b94c921a882d7",
-  "output_sha256": "b6538906102ef0aab143295b09d990bf951fae67b04a01bc42309d92f76a4954",
+  "output_sha256": "065355b19b9d209ccf107d34d33fc02d69f3aabbcfc389b172b29e36b92ab738",
   "changed_zip_parts": [
     "xl/styles.xml",
     "xl/worksheets/sheet1.xml"

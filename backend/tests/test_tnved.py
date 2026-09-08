@@ -194,7 +194,8 @@ def test_excel_preserves_all_parts_values_styles_existing_and_comments(tmp_path,
     b = before.active
     assert a["F2"].value == "6105100000" and a["F2"].data_type == "s" and a["F2"].number_format == "@"
     assert a["F4"].value == "1234" and a["G2"].value == "=1+2"
-    assert "Текст пользователя" in a["H3"].value and "подошвы" in a["H3"].value
+    assert _sections["items"][1]["original_comment"] == "Текст пользователя"
+    assert a["H3"].value == _sections["items"][1]["user_comment"] and "подошвы" in a["H3"].value
     assert copy(a["A2"].font) == copy(b["A2"].font) and copy(a["F2"].fill) == copy(b["F2"].fill)
     assert a.freeze_panes == b.freeze_panes and a.auto_filter.ref == b.auto_filter.ref
     assert a.column_dimensions["A"].width == 24 and a.row_dimensions[2].height == 31
@@ -204,7 +205,7 @@ def test_excel_preserves_all_parts_values_styles_existing_and_comments(tmp_path,
     after.close()
 
 
-def test_no_comment_column_when_all_succeed(tmp_path, monkeypatch):
+def test_output_columns_exist_even_when_all_succeed(tmp_path, monkeypatch):
     path = tmp_path / "input.xlsx"
     make_input(path, True)
     wb = load_workbook(path)
@@ -225,7 +226,10 @@ def test_no_comment_column_when_all_succeed(tmp_path, monkeypatch):
         [SimpleNamespace(path=path, original_name=path.name)], {}, tmp_path / "out", lambda p, m: None, None
     )
     wb = load_workbook(out)
-    assert wb.active.max_column == 7
+    assert wb.active.max_column == 9
+    assert wb.active["H1"].value == "Комментарий" and not wb.active["H2"].value
+    assert wb.active["I1"].value == "Источник"
+    assert wb.active["I2"].value == "https://www.alta.ru/tnved/code/6105100000/"
     wb.close()
 
 
@@ -262,8 +266,8 @@ def test_formula_in_code_and_comment_is_preserved(tmp_path, monkeypatch):
         [SimpleNamespace(path=out, original_name=out.name)], {}, tmp_path / "again", lambda p, m: None, None
     )
     wb = load_workbook(again)
-    assert wb.active.max_column == 9
-    assert wb.active["I3"].value.count("Не указан материал подошвы.") == 1
+    assert wb.active.max_column == 10
+    assert wb.active["I3"].value.count("материал подошвы") == 1
     assert wb.active["H3"].value == '="Комментарий пользователя"'
     wb.close()
 
