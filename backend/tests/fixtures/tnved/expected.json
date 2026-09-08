@@ -1,0 +1,746 @@
+{
+  "review_date": "2026-09-08",
+  "source_sha256": "d72bbd00df20b520b4cea2fe876981a0dd87f6f6931b08f5267b94c921a882d7",
+  "skill_file": "Артикулы_коллеции_ВЛ_27_Нет_кодов_ТНВЭД_2_с_кодами_ТНВЭД.xlsx",
+  "skill_sha256": "c7f75de4d88e2e0c8d0966aa487a2d1748aa7b28fe4e3a3fd6320a7c08450f1b",
+  "skill_provenance": "User confirmed the 23-code file in this task",
+  "rows": [
+    {
+      "row": 2,
+      "source_code": "272332",
+      "article": "JZ251202-37",
+      "status": "UNRESOLVED",
+      "code": null,
+      "category": "SHOE_MATERIALS",
+      "required_reason_fragments": [
+        "материал верха",
+        "материал подошвы"
+      ],
+      "skill_difference_category": null,
+      "reviewed_decision": "Общий состав «натуральная кожа» не описывает отдельно верх и наружную подошву."
+    },
+    {
+      "row": 3,
+      "source_code": "272333",
+      "article": "JZ251202-13",
+      "status": "UNRESOLVED",
+      "code": null,
+      "category": "SHOE_MATERIALS",
+      "required_reason_fragments": [
+        "материал верха",
+        "материал подошвы"
+      ],
+      "skill_difference_category": null,
+      "reviewed_decision": "Общий состав «натуральная кожа» не описывает отдельно верх и наружную подошву."
+    },
+    {
+      "row": 4,
+      "source_code": "272334",
+      "article": "JZ251202-29",
+      "status": "UNRESOLVED",
+      "code": null,
+      "category": "SHOE_MATERIALS",
+      "required_reason_fragments": [
+        "материал верха",
+        "материал подошвы"
+      ],
+      "skill_difference_category": null,
+      "reviewed_decision": "Общий состав «натуральная кожа» не описывает отдельно верх и наружную подошву."
+    },
+    {
+      "row": 5,
+      "source_code": "272335",
+      "article": "JZ251202-32",
+      "status": "UNRESOLVED",
+      "code": null,
+      "category": "SHOE_MATERIALS",
+      "required_reason_fragments": [
+        "материал верха",
+        "материал подошвы"
+      ],
+      "skill_difference_category": null,
+      "reviewed_decision": "Общий состав «натуральная кожа» не описывает отдельно верх и наружную подошву."
+    },
+    {
+      "row": 6,
+      "source_code": "272336",
+      "article": "JZ251202-38",
+      "status": "UNRESOLVED",
+      "code": null,
+      "category": "SHOE_MATERIALS",
+      "required_reason_fragments": [
+        "материал верха",
+        "материал подошвы"
+      ],
+      "skill_difference_category": null,
+      "reviewed_decision": "Общий состав «натуральная кожа» не описывает отдельно верх и наружную подошву."
+    },
+    {
+      "row": 7,
+      "source_code": "272337",
+      "article": "BA33-6065-3",
+      "status": "UNRESOLVED",
+      "code": null,
+      "category": "SHOE_MATERIALS",
+      "required_reason_fragments": [
+        "материал верха",
+        "материал подошвы"
+      ],
+      "skill_difference_category": null,
+      "reviewed_decision": "Общий состав «натуральная кожа» не описывает отдельно верх и наружную подошву."
+    },
+    {
+      "row": 8,
+      "source_code": "272338",
+      "article": "HF251202-11",
+      "status": "UNRESOLVED",
+      "code": null,
+      "category": "SHOE_MATERIALS",
+      "required_reason_fragments": [
+        "материал верха",
+        "материал подошвы"
+      ],
+      "skill_difference_category": null,
+      "reviewed_decision": "Общий состав «натуральная кожа» не описывает отдельно верх и наружную подошву."
+    },
+    {
+      "row": 9,
+      "source_code": "272339",
+      "article": "733-2",
+      "status": "UNRESOLVED",
+      "code": null,
+      "category": "SHOE_MATERIALS",
+      "required_reason_fragments": [
+        "материал верха",
+        "материал подошвы"
+      ],
+      "skill_difference_category": null,
+      "reviewed_decision": "Общий состав «натуральная кожа» не описывает отдельно верх и наружную подошву."
+    },
+    {
+      "row": 10,
+      "source_code": "272328",
+      "article": "7S-732RL-0202-07",
+      "status": "CONFIRMED",
+      "code": "6109902000",
+      "category": "CONFIRMED",
+      "required_reason_fragments": [],
+      "skill_difference_category": null,
+      "reviewed_decision": "Полный путь соответствует виду, полу, трикотажу и материалу; альтернативы исключены."
+    },
+    {
+      "row": 11,
+      "source_code": "272329",
+      "article": "7S-732RL-0203-15",
+      "status": "CONFIRMED",
+      "code": "6109902000",
+      "category": "CONFIRMED",
+      "required_reason_fragments": [],
+      "skill_difference_category": null,
+      "reviewed_decision": "Полный путь соответствует виду, полу, трикотажу и материалу; альтернативы исключены."
+    },
+    {
+      "row": 12,
+      "source_code": "272330",
+      "article": "7S-732RL-0204-11",
+      "status": "CONFIRMED",
+      "code": "6109902000",
+      "category": "CONFIRMED",
+      "required_reason_fragments": [],
+      "skill_difference_category": null,
+      "reviewed_decision": "Полный путь соответствует виду, полу, трикотажу и материалу; альтернативы исключены."
+    },
+    {
+      "row": 13,
+      "source_code": "272340",
+      "article": "7S-821CF-0924-12",
+      "status": "UNRESOLVED",
+      "code": null,
+      "category": "UNKNOWN_FIBER",
+      "required_reason_fragments": [
+        "тенсел"
+      ],
+      "skill_difference_category": null,
+      "reviewed_decision": "Торговое название «тенсел» не заменяет документированный состав волокна."
+    },
+    {
+      "row": 14,
+      "source_code": "272341",
+      "article": "7S-821RL-0925-11",
+      "status": "UNRESOLVED",
+      "code": null,
+      "category": "DENIM_AND_USE",
+      "required_reason_fragments": [
+        "деним",
+        "профессиональная",
+        "вельвет"
+      ],
+      "skill_difference_category": null,
+      "reviewed_decision": "Название «джинсы» не доказывает определение денима, исключение вельвет-корда и производственного назначения."
+    },
+    {
+      "row": 15,
+      "source_code": "272342",
+      "article": "7S-821CF-0926-02",
+      "status": "UNRESOLVED",
+      "code": null,
+      "category": "DENIM_AND_USE",
+      "required_reason_fragments": [
+        "деним",
+        "профессиональная",
+        "вельвет"
+      ],
+      "skill_difference_category": null,
+      "reviewed_decision": "Название «джинсы» не доказывает определение денима, исключение вельвет-корда и производственного назначения."
+    },
+    {
+      "row": 16,
+      "source_code": "272347",
+      "article": "7S-211TD-0915-23",
+      "status": "CONFIRMED",
+      "code": "6103330000",
+      "category": "CONFIRMED",
+      "required_reason_fragments": [],
+      "skill_difference_category": null,
+      "reviewed_decision": "Реализовано отсутствовавшее правило: промежуточный вид изделия и материал; у брюк остаточные альтернативы исключены. Совпадает с предыдущим Skill."
+    },
+    {
+      "row": 17,
+      "source_code": "272348",
+      "article": "7S-231VL-0916-23",
+      "status": "CONFIRMED",
+      "code": "6103430001",
+      "category": "CONFIRMED",
+      "required_reason_fragments": [],
+      "skill_difference_category": null,
+      "reviewed_decision": "Реализовано отсутствовавшее правило: промежуточный вид изделия и материал; у брюк остаточные альтернативы исключены. Совпадает с предыдущим Skill."
+    },
+    {
+      "row": 18,
+      "source_code": "272349",
+      "article": "7S-211TD-0917-15",
+      "status": "UNRESOLVED",
+      "code": null,
+      "category": "UNKNOWN_FIBER",
+      "required_reason_fragments": [
+        "тенсел"
+      ],
+      "skill_difference_category": "E",
+      "reviewed_decision": "Торговое название «тенсел» не заменяет документированный состав волокна. Предыдущий Skill использовал недоказанную идентификацию волокна. Для выбора кода по-прежнему не хватает данных. Код app_before 6103490002 дополнительно ошибочно относится к ветви брюк/прочих изделий, а не пиджаков."
+    },
+    {
+      "row": 19,
+      "source_code": "272350",
+      "article": "7S-231VL-0918-15",
+      "status": "UNRESOLVED",
+      "code": null,
+      "category": "UNKNOWN_FIBER",
+      "required_reason_fragments": [
+        "тенсел"
+      ],
+      "skill_difference_category": "E",
+      "reviewed_decision": "Торговое название «тенсел» не заменяет документированный состав волокна. Предыдущий Skill использовал недоказанную идентификацию волокна. Для выбора кода по-прежнему не хватает данных. Код app_before 6103490002 дополнительно пропускал предшествующую ветвь брюк и бриджей 6103490001."
+    },
+    {
+      "row": 20,
+      "source_code": "272353",
+      "article": "7S-811LZ-0919-02",
+      "status": "CONFIRMED",
+      "code": "6203399000",
+      "category": "CONFIRMED",
+      "required_reason_fragments": [],
+      "skill_difference_category": null,
+      "reviewed_decision": "Реализовано отсутствовавшее правило: лён является классифицирующим материалом, исключены все предшествующие материалы у пиджаков. Совпадает с Skill."
+    },
+    {
+      "row": 21,
+      "source_code": "272354",
+      "article": "7S-811VC-0920-25",
+      "status": "CONFIRMED",
+      "code": "6203399000",
+      "category": "CONFIRMED",
+      "required_reason_fragments": [],
+      "skill_difference_category": null,
+      "reviewed_decision": "Реализовано отсутствовавшее правило: лён является классифицирующим материалом, исключены все предшествующие материалы у пиджаков. Совпадает с Skill."
+    },
+    {
+      "row": 22,
+      "source_code": "272356",
+      "article": "7S-211VC-3504-13",
+      "status": "CONFIRMED",
+      "code": "6103330000",
+      "category": "CONFIRMED",
+      "required_reason_fragments": [],
+      "skill_difference_category": null,
+      "reviewed_decision": "Реализовано отсутствовавшее правило: промежуточный вид изделия и материал; у брюк остаточные альтернативы исключены. Совпадает с предыдущим Skill."
+    },
+    {
+      "row": 23,
+      "source_code": "272357",
+      "article": "7S-231VL-3505-13",
+      "status": "CONFIRMED",
+      "code": "6103430001",
+      "category": "CONFIRMED",
+      "required_reason_fragments": [],
+      "skill_difference_category": null,
+      "reviewed_decision": "Реализовано отсутствовавшее правило: промежуточный вид изделия и материал; у брюк остаточные альтернативы исключены. Совпадает с предыдущим Skill."
+    },
+    {
+      "row": 24,
+      "source_code": "272358",
+      "article": "7S-211VC-3506-12",
+      "status": "UNRESOLVED",
+      "code": null,
+      "category": "PROFESSIONAL_USE",
+      "required_reason_fragments": [
+        "промышленная или профессиональная одежда"
+      ],
+      "skill_difference_category": "E",
+      "reviewed_decision": "Нельзя исключить производственную/профессиональную ветвь по бренду KANZLER или отсутствию назначения в Excel. Предыдущий Skill сделал недостаточно доказанное предположение; для доказательства по-прежнему не хватает данных."
+    },
+    {
+      "row": 25,
+      "source_code": "272359",
+      "article": "7S-231BB-3507-12",
+      "status": "UNRESOLVED",
+      "code": null,
+      "category": "PROFESSIONAL_USE",
+      "required_reason_fragments": [
+        "промышленная или профессиональная одежда"
+      ],
+      "skill_difference_category": "E",
+      "reviewed_decision": "Нельзя исключить производственную/профессиональную ветвь по бренду KANZLER или отсутствию назначения в Excel. Предыдущий Skill сделал недостаточно доказанное предположение; для доказательства по-прежнему не хватает данных."
+    },
+    {
+      "row": 26,
+      "source_code": "272360",
+      "article": "7S-211VC-3508-15",
+      "status": "UNRESOLVED",
+      "code": null,
+      "category": "PROFESSIONAL_USE",
+      "required_reason_fragments": [
+        "промышленная или профессиональная одежда"
+      ],
+      "skill_difference_category": "E",
+      "reviewed_decision": "Нельзя исключить производственную/профессиональную ветвь по бренду KANZLER или отсутствию назначения в Excel. Предыдущий Skill сделал недостаточно доказанное предположение; для доказательства по-прежнему не хватает данных."
+    },
+    {
+      "row": 27,
+      "source_code": "272361",
+      "article": "7S-231BB-3509-15",
+      "status": "UNRESOLVED",
+      "code": null,
+      "category": "PROFESSIONAL_USE",
+      "required_reason_fragments": [
+        "промышленная или профессиональная одежда"
+      ],
+      "skill_difference_category": "E",
+      "reviewed_decision": "Нельзя исключить производственную/профессиональную ветвь по бренду KANZLER или отсутствию назначения в Excel. Предыдущий Skill сделал недостаточно доказанное предположение; для доказательства по-прежнему не хватает данных."
+    },
+    {
+      "row": 28,
+      "source_code": "272367",
+      "article": "7S-W41WT-4201-04",
+      "status": "UNRESOLVED",
+      "code": null,
+      "category": "SHOE_CONSTRUCTION",
+      "required_reason_fragments": [
+        "материал верха",
+        "лодыжку",
+        "длина стельки",
+        "перфорациями"
+      ],
+      "skill_difference_category": null,
+      "reviewed_decision": "Верх не обозначен явно; нет высоты верха, длины стельки и специальных конструктивных признаков. Подкладка/стелька/подошва извлечены отдельно."
+    },
+    {
+      "row": 29,
+      "source_code": "272368",
+      "article": "7S-W41WT-4202-22",
+      "status": "UNRESOLVED",
+      "code": null,
+      "category": "SHOE_CONSTRUCTION",
+      "required_reason_fragments": [
+        "материал верха",
+        "лодыжку",
+        "длина стельки",
+        "перфорациями"
+      ],
+      "skill_difference_category": null,
+      "reviewed_decision": "Верх не обозначен явно; нет высоты верха, длины стельки и специальных конструктивных признаков. Подкладка/стелька/подошва извлечены отдельно."
+    },
+    {
+      "row": 30,
+      "source_code": "272369",
+      "article": "7S-W41WT-4203-15",
+      "status": "UNRESOLVED",
+      "code": null,
+      "category": "SHOE_CONSTRUCTION",
+      "required_reason_fragments": [
+        "материал верха",
+        "лодыжку",
+        "длина стельки",
+        "перфорациями"
+      ],
+      "skill_difference_category": null,
+      "reviewed_decision": "Верх не обозначен явно; нет высоты верха, длины стельки и специальных конструктивных признаков. Подкладка/стелька/подошва извлечены отдельно."
+    },
+    {
+      "row": 31,
+      "source_code": "272370",
+      "article": "7S-W42WT-4204-05",
+      "status": "UNRESOLVED",
+      "code": null,
+      "category": "SHOE_CONSTRUCTION",
+      "required_reason_fragments": [
+        "материал верха",
+        "лодыжку",
+        "длина стельки",
+        "перфорациями"
+      ],
+      "skill_difference_category": null,
+      "reviewed_decision": "Верх не обозначен явно; нет высоты верха, длины стельки и специальных конструктивных признаков. Подкладка/стелька/подошва извлечены отдельно."
+    },
+    {
+      "row": 32,
+      "source_code": "272371",
+      "article": "7S-A1KWT-4301-60",
+      "status": "UNRESOLVED",
+      "code": null,
+      "category": "UNKNOWN_FIBER",
+      "required_reason_fragments": [
+        "микрофибра"
+      ],
+      "skill_difference_category": null,
+      "reviewed_decision": "Микрофибра не раскрывает химический тип волокна; основной состав требует уточнения."
+    },
+    {
+      "row": 33,
+      "source_code": "272372",
+      "article": "7S-A1KWT-4301-61",
+      "status": "UNRESOLVED",
+      "code": null,
+      "category": "UNKNOWN_FIBER",
+      "required_reason_fragments": [
+        "микрофибра"
+      ],
+      "skill_difference_category": null,
+      "reviewed_decision": "Микрофибра не раскрывает химический тип волокна; основной состав требует уточнения."
+    },
+    {
+      "row": 34,
+      "source_code": "272373",
+      "article": "7S-A1KWT-4301-23",
+      "status": "UNRESOLVED",
+      "code": null,
+      "category": "UNKNOWN_FIBER",
+      "required_reason_fragments": [
+        "микрофибра"
+      ],
+      "skill_difference_category": null,
+      "reviewed_decision": "Микрофибра не раскрывает химический тип волокна; основной состав требует уточнения."
+    },
+    {
+      "row": 35,
+      "source_code": "272374",
+      "article": "7S-A1KWT-4301-15",
+      "status": "UNRESOLVED",
+      "code": null,
+      "category": "UNKNOWN_FIBER",
+      "required_reason_fragments": [
+        "микрофибра"
+      ],
+      "skill_difference_category": null,
+      "reviewed_decision": "Микрофибра не раскрывает химический тип волокна; основной состав требует уточнения."
+    },
+    {
+      "row": 36,
+      "source_code": "272375",
+      "article": "7S-A1KWT-4303-15",
+      "status": "UNRESOLVED",
+      "code": null,
+      "category": "UNKNOWN_FIBER",
+      "required_reason_fragments": [
+        "микрофибра"
+      ],
+      "skill_difference_category": null,
+      "reviewed_decision": "Микрофибра не раскрывает химический тип волокна; основной состав требует уточнения."
+    },
+    {
+      "row": 37,
+      "source_code": "272376",
+      "article": "7S-A1KWT-4304-63",
+      "status": "UNRESOLVED",
+      "code": null,
+      "category": "UNKNOWN_FIBER",
+      "required_reason_fragments": [
+        "микрофибра"
+      ],
+      "skill_difference_category": null,
+      "reviewed_decision": "Микрофибра не раскрывает химический тип волокна; основной состав требует уточнения."
+    },
+    {
+      "row": 38,
+      "source_code": "272377",
+      "article": "7S-A1KWT-4305-61",
+      "status": "UNRESOLVED",
+      "code": null,
+      "category": "UNKNOWN_FIBER",
+      "required_reason_fragments": [
+        "микрофибра"
+      ],
+      "skill_difference_category": null,
+      "reviewed_decision": "Микрофибра не раскрывает химический тип волокна; основной состав требует уточнения."
+    },
+    {
+      "row": 39,
+      "source_code": "272378",
+      "article": "7S-A1KWT-4306-07",
+      "status": "UNRESOLVED",
+      "code": null,
+      "category": "UNKNOWN_FIBER",
+      "required_reason_fragments": [
+        "микрофибра"
+      ],
+      "skill_difference_category": null,
+      "reviewed_decision": "Микрофибра не раскрывает химический тип волокна; основной состав требует уточнения."
+    },
+    {
+      "row": 40,
+      "source_code": "272379",
+      "article": "7S-A1KWT-4307-07",
+      "status": "UNRESOLVED",
+      "code": null,
+      "category": "UNKNOWN_FIBER",
+      "required_reason_fragments": [
+        "микрофибра"
+      ],
+      "skill_difference_category": null,
+      "reviewed_decision": "Микрофибра не раскрывает химический тип волокна; основной состав требует уточнения."
+    },
+    {
+      "row": 41,
+      "source_code": "272380",
+      "article": "7S-A1KWT-4308-15",
+      "status": "UNRESOLVED",
+      "code": null,
+      "category": "UNKNOWN_FIBER",
+      "required_reason_fragments": [
+        "микрофибра"
+      ],
+      "skill_difference_category": null,
+      "reviewed_decision": "Микрофибра не раскрывает химический тип волокна; основной состав требует уточнения."
+    },
+    {
+      "row": 42,
+      "source_code": "272381",
+      "article": "7S-A1KWT-4309-15",
+      "status": "UNRESOLVED",
+      "code": null,
+      "category": "UNKNOWN_FIBER",
+      "required_reason_fragments": [
+        "микрофибра"
+      ],
+      "skill_difference_category": null,
+      "reviewed_decision": "Микрофибра не раскрывает химический тип волокна; основной состав требует уточнения."
+    },
+    {
+      "row": 43,
+      "source_code": "272382",
+      "article": "7S-A1KWT-43010-13",
+      "status": "UNRESOLVED",
+      "code": null,
+      "category": "UNKNOWN_FIBER",
+      "required_reason_fragments": [
+        "микрофибра"
+      ],
+      "skill_difference_category": null,
+      "reviewed_decision": "Микрофибра не раскрывает химический тип волокна; основной состав требует уточнения."
+    },
+    {
+      "row": 44,
+      "source_code": "272383",
+      "article": "7S-A1KWT-43011-13",
+      "status": "UNRESOLVED",
+      "code": null,
+      "category": "UNKNOWN_FIBER",
+      "required_reason_fragments": [
+        "микрофибра"
+      ],
+      "skill_difference_category": null,
+      "reviewed_decision": "Микрофибра не раскрывает химический тип волокна; основной состав требует уточнения."
+    },
+    {
+      "row": 45,
+      "source_code": "272384",
+      "article": "7S-A1KWT-43012-25",
+      "status": "UNRESOLVED",
+      "code": null,
+      "category": "UNKNOWN_FIBER",
+      "required_reason_fragments": [
+        "микрофибра"
+      ],
+      "skill_difference_category": null,
+      "reviewed_decision": "Микрофибра не раскрывает химический тип волокна; основной состав требует уточнения."
+    },
+    {
+      "row": 46,
+      "source_code": "272385",
+      "article": "7S-A1KWT-43013-04",
+      "status": "UNRESOLVED",
+      "code": null,
+      "category": "UNKNOWN_FIBER",
+      "required_reason_fragments": [
+        "микрофибра"
+      ],
+      "skill_difference_category": null,
+      "reviewed_decision": "Микрофибра не раскрывает химический тип волокна; основной состав требует уточнения."
+    },
+    {
+      "row": 47,
+      "source_code": "272386",
+      "article": "7S-A1KWT-43014-23",
+      "status": "UNRESOLVED",
+      "code": null,
+      "category": "UNKNOWN_FIBER",
+      "required_reason_fragments": [
+        "микрофибра"
+      ],
+      "skill_difference_category": null,
+      "reviewed_decision": "Микрофибра не раскрывает химический тип волокна; основной состав требует уточнения."
+    },
+    {
+      "row": 48,
+      "source_code": "272387",
+      "article": "7S-A1KWT-4302-12",
+      "status": "CONFIRMED",
+      "code": "6215100000",
+      "category": "CONFIRMED",
+      "required_reason_fragments": [],
+      "skill_difference_category": null,
+      "reviewed_decision": "Полный путь соответствует виду, полу, трикотажу и материалу; альтернативы исключены."
+    },
+    {
+      "row": 49,
+      "source_code": "272388",
+      "article": "7S-A1KWT-4302-15",
+      "status": "CONFIRMED",
+      "code": "6215100000",
+      "category": "CONFIRMED",
+      "required_reason_fragments": [],
+      "skill_difference_category": null,
+      "reviewed_decision": "Полный путь соответствует виду, полу, трикотажу и материалу; альтернативы исключены."
+    },
+    {
+      "row": 50,
+      "source_code": "272389",
+      "article": "7S-A1KWT-4302-64",
+      "status": "CONFIRMED",
+      "code": "6215100000",
+      "category": "CONFIRMED",
+      "required_reason_fragments": [],
+      "skill_difference_category": null,
+      "reviewed_decision": "Полный путь соответствует виду, полу, трикотажу и материалу; альтернативы исключены."
+    },
+    {
+      "row": 51,
+      "source_code": "272391",
+      "article": "7S-191WT-0927-15",
+      "status": "CONFIRMED",
+      "code": "6201900000",
+      "category": "CONFIRMED",
+      "required_reason_fragments": [],
+      "skill_difference_category": null,
+      "reviewed_decision": "Полный путь соответствует виду, полу, трикотажу и материалу; альтернативы исключены."
+    },
+    {
+      "row": 52,
+      "source_code": "272392",
+      "article": "7S-191WT-0928-21",
+      "status": "CONFIRMED",
+      "code": "6201300000",
+      "category": "CONFIRMED",
+      "required_reason_fragments": [],
+      "skill_difference_category": null,
+      "reviewed_decision": "Полный путь соответствует виду, полу, трикотажу и материалу; альтернативы исключены."
+    },
+    {
+      "row": 53,
+      "source_code": "272393",
+      "article": "7S-131WT-0929-15",
+      "status": "CONFIRMED",
+      "code": "6201400000",
+      "category": "CONFIRMED",
+      "required_reason_fragments": [],
+      "skill_difference_category": null,
+      "reviewed_decision": "Полный путь соответствует виду, полу, трикотажу и материалу; альтернативы исключены."
+    },
+    {
+      "row": 54,
+      "source_code": "272394",
+      "article": "7S-181WT-0930-21",
+      "status": "CONFIRMED",
+      "code": "6201400000",
+      "category": "CONFIRMED",
+      "required_reason_fragments": [],
+      "skill_difference_category": null,
+      "reviewed_decision": "Breaking change объяснён XI.2: шерсть 50%, объединённые химические волокна 50%; при равенстве выбирается последняя группа 54/55. Актуальная ветвь 6201400000 охватывает химические нити. Совпадает со Skill; app_before 6201200000 ошибочен."
+    },
+    {
+      "row": 55,
+      "source_code": "272395",
+      "article": "7S-J11WT-0932-26",
+      "status": "CONFIRMED",
+      "code": "6201200000",
+      "category": "CONFIRMED",
+      "required_reason_fragments": [],
+      "skill_difference_category": null,
+      "reviewed_decision": "Полный путь соответствует виду, полу, трикотажу и материалу; альтернативы исключены."
+    },
+    {
+      "row": 56,
+      "source_code": "272396",
+      "article": "7S-671RL-0205-15",
+      "status": "UNRESOLVED",
+      "code": null,
+      "category": "KNIT_DENSITY_AND_COLLAR",
+      "required_reason_fragments": [
+        "12 петель",
+        "облегающее",
+        "без разреза"
+      ],
+      "skill_difference_category": null,
+      "reviewed_decision": "Не проверены признаки лёгкого тонкого трикотажа по P6110: плотность по двум направлениям, облегание и ворот без разреза."
+    },
+    {
+      "row": 57,
+      "source_code": "272397",
+      "article": "7S-671RL-0205-21",
+      "status": "UNRESOLVED",
+      "code": null,
+      "category": "KNIT_DENSITY_AND_COLLAR",
+      "required_reason_fragments": [
+        "12 петель",
+        "облегающее",
+        "без разреза"
+      ],
+      "skill_difference_category": null,
+      "reviewed_decision": "Не проверены признаки лёгкого тонкого трикотажа по P6110: плотность по двум направлениям, облегание и ворот без разреза."
+    },
+    {
+      "row": 58,
+      "source_code": "272398",
+      "article": "7S-651WT-0206-23",
+      "status": "UNRESOLVED",
+      "code": null,
+      "category": "KNIT_DENSITY_AND_COLLAR",
+      "required_reason_fragments": [
+        "12 петель",
+        "облегающее",
+        "без разреза"
+      ],
+      "skill_difference_category": null,
+      "reviewed_decision": "Не проверены признаки лёгкого тонкого трикотажа по P6110: плотность по двум направлениям, облегание и ворот без разреза."
+    }
+  ]
+}

@@ -27,7 +27,10 @@ def evidence(code="6105100000"):
         "levels": [
             {"code": "50-63", "description": "Текстиль"},
             {"code": "61", "description": "Одежда"},
-            {"code": "6105", "description": "Рубашки трикотажные мужские или для мальчиков"},
+            {
+                "code": "6105",
+                "description": "Рубашки трикотажные машинного или ручного вязания, мужские или для мальчиков",
+            },
             {"code": code, "description": "из хлопчатобумажной пряжи"},
         ],
     }
@@ -48,7 +51,8 @@ def test_feature_signature_and_material():
 
 def test_material_reverse_order_and_ambiguity():
     assert extract_features(shirt(Состав="хлопок 100%")).material == "хлопок"
-    assert extract_features(shirt(Состав="50% хлопок, 50% полиэстер")).material is None
+    # Section XI 2(A,B): equal chapter weights select the last chapter (54/55).
+    assert extract_features(shirt(Состав="50% хлопок, 50% полиэстер")).material == "синтетические"
     assert extract_features(shirt(Состав="натуральная кожа")).missing
 
 
@@ -56,7 +60,8 @@ def test_knit_conflict_and_shoe_strictness():
     f = extract_features(shirt(Наименование="Рубашка трикотажная", Трикотаж="Нет"))
     assert any("противореч" in x for x in f.missing)
     f = extract_features({"Номенклатура": "Обувь", "Пол": "Мужской", "Состав": "натуральная кожа"})
-    assert "материал подошвы" in f.missing and "длина стельки" in f.missing
+    # Insole length is requested by a candidate, not unconditionally for all shoes.
+    assert "материал подошвы" in f.missing and "материал верха" in f.missing
 
 
 @pytest.mark.parametrize(
@@ -251,3 +256,176 @@ def test_formula_in_code_and_comment_is_preserved(tmp_path, monkeypatch):
     assert wb.active["I1"].value == "Комментарий ТН ВЭД"
     assert "подошвы" in wb.active["I3"].value
     wb.close()
+    # Reprocessing must reuse the dedicated comment column beside the formula,
+    # not create a new identical header on every run.
+    _, _, again, *_ = run(
+        [SimpleNamespace(path=out, original_name=out.name)], {}, tmp_path / "again", lambda p, m: None, None
+    )
+    wb = load_workbook(again)
+    assert wb.active.max_column == 9
+    assert wb.active["I3"].value.count("Не указан материал подошвы.") == 1
+    assert wb.active["H3"].value == '="Комментарий пользователя"'
+    wb.close()
+
+
+def test_explicit_verification_preserves_formula_and_reports_unproven(tmp_path, monkeypatch):
+    path = tmp_path / "formula_verify.xlsx"
+    make_input(path, True)
+    wb = load_workbook(path)
+    wb.active["F2"] = '=TEXT(6105100000,"0")'
+    wb.save(path)
+    wb.close()
+    monkeypatch.setattr(
+        ClassificationEngine,
+        "classify",
+        lambda self, f: {
+            "code": "6105100000",
+            "status": "Код определён",
+            "comment": "",
+            "evidence": evidence(),
+            "candidates": [],
+        },
+    )
+    _, sections, out, *_ = run(
+        [SimpleNamespace(path=path, original_name=path.name)],
+        {"verify_existing": True},
+        tmp_path / "out",
+        lambda p, m: None,
+        None,
+    )
+    item = sections["items"][0]
+    assert item["code"] is None and item["proposed_code"] == "6105100000"
+    assert item["status"] == "Исходный код не подтверждён"
+    assert item["existing_verification"]["status"] == "UNPROVEN"
+    wb = load_workbook(out)
+    assert wb.active["F2"].value == '=TEXT(6105100000,"0")'
+    assert "формула сохранена" in wb.active["H2"].value
+    wb.close()
+
+
+def test_existing_code_verified_separately_not_erased_when_unproven(tmp_path, monkeypatch):
+    path = tmp_path / "existing_verify.xlsx"
+    make_input(path, True)
+    wb = load_workbook(path)
+    wb.active["F2"] = "6105100000"
+    wb.save(path)
+    wb.close()
+    checked = []
+    client = SimpleNamespace(verify=lambda code: checked.append(code) or evidence(code), close=lambda: None)
+    monkeypatch.setattr(
+        ClassificationEngine,
+        "classify",
+        lambda self, f: {
+            "code": None,
+            "status": "Требуется уточнение",
+            "comment": "Не исключён второй кандидат.",
+            "evidence": None,
+            "candidates": [],
+        },
+    )
+    _, sections, out, *_ = run(
+        [SimpleNamespace(path=path, original_name=path.name)],
+        {"verify_existing": True},
+        tmp_path / "out",
+        lambda p, m: None,
+        None,
+        client_factory=lambda: client,
+    )
+    assert checked == ["6105100000"]
+    assert sections["items"][0]["existing_verification"]["status"] == "UNPROVEN"
+    wb = load_workbook(out)
+    assert wb.active["F2"].value == "6105100000"
+    assert "не подтверждён" in wb.active["H2"].value
+    wb.close()
+
+
+def test_xlsx_drawing_and_custom_parts_survive(tmp_path, monkeypatch):
+    import base64
+
+    from lxml import etree
+
+    path = tmp_path / "drawings.xlsx"
+    make_input(path)
+    with ZipFile(path) as z:
+        parts = {name: z.read(name) for name in z.namelist()}
+    sheet = etree.fromstring(parts["xl/worksheets/sheet1.xml"])
+    drawing = etree.SubElement(sheet, "{http://schemas.openxmlformats.org/spreadsheetml/2006/main}drawing")
+    drawing.set("{http://schemas.openxmlformats.org/officeDocument/2006/relationships}id", "rIdImage")
+    parts["xl/worksheets/sheet1.xml"] = etree.tostring(sheet)
+    parts["xl/worksheets/_rels/sheet1.xml.rels"] = (
+        b'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rIdImage" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing" Target="../drawings/drawing1.xml"/></Relationships>'
+    )
+    parts["xl/drawings/drawing1.xml"] = (
+        b'<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><xdr:oneCellAnchor><xdr:from><xdr:col>9</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>1</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from><xdr:ext cx="76200" cy="76200"/><xdr:pic><xdr:nvPicPr><xdr:cNvPr id="1" name="Image 1"/><xdr:cNvPicPr/></xdr:nvPicPr><xdr:blipFill><a:blip r:embed="rId1"/><a:stretch><a:fillRect/></a:stretch></xdr:blipFill><xdr:spPr><a:prstGeom prst="rect"/></xdr:spPr></xdr:pic><xdr:clientData/></xdr:oneCellAnchor></xdr:wsDr>'
+    )
+    parts["xl/drawings/_rels/drawing1.xml.rels"] = (
+        b'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/image1.png"/></Relationships>'
+    )
+    parts["xl/media/image1.png"] = base64.b64decode(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aF1kAAAAASUVORK5CYII="
+    )
+    content_types = etree.fromstring(parts["[Content_Types].xml"])
+    etree.SubElement(
+        content_types,
+        "{http://schemas.openxmlformats.org/package/2006/content-types}Default",
+        Extension="png",
+        ContentType="image/png",
+    )
+    etree.SubElement(
+        content_types,
+        "{http://schemas.openxmlformats.org/package/2006/content-types}Override",
+        PartName="/xl/drawings/drawing1.xml",
+        ContentType="application/vnd.openxmlformats-officedocument.drawing+xml",
+    )
+    parts["[Content_Types].xml"] = etree.tostring(content_types)
+    parts["customXml/item1.xml"] = b"<custom>keep</custom>"
+    with ZipFile(path, "w") as z:
+        for name, content in parts.items():
+            z.writestr(name, content)
+        z.comment = b"original archive comment"
+    monkeypatch.setattr(
+        ClassificationEngine,
+        "classify",
+        lambda self, f: {
+            "code": None,
+            "status": "Требуется уточнение",
+            "comment": "Не указан материал подошвы.",
+            "evidence": None,
+            "candidates": [],
+        },
+    )
+    _, _, out, *_ = run(
+        [SimpleNamespace(path=path, original_name=path.name)], {}, tmp_path / "out", lambda p, m: None, None
+    )
+    with ZipFile(path) as before, ZipFile(out) as after:
+        assert before.namelist() == after.namelist() and before.comment == after.comment
+        for name in before.namelist():
+            if name not in ("xl/styles.xml", "xl/worksheets/sheet1.xml"):
+                assert before.read(name) == after.read(name), name
+    wb = load_workbook(out)
+    assert wb.active["G2"].value == "=1+2"
+    wb.close()
+
+
+def test_empty_name_falls_back_to_nomenclature(tmp_path, monkeypatch):
+    path = tmp_path / "empty_name.xlsx"
+    wb = Workbook()
+    wb.active.append(["Наименование", "Номенклатура", "Пол", "Состав", "Трикотаж"])
+    wb.active.append([None, "Рубашка", "Мужской", "100% хлопок", "Да"])
+    wb.save(path)
+    wb.close()
+    monkeypatch.setattr(
+        ClassificationEngine,
+        "classify",
+        lambda self, f: {
+            "code": None,
+            "status": "Требуется уточнение",
+            "comment": "Источник не проверен.",
+            "evidence": None,
+            "candidates": [],
+        },
+    )
+    result, _, _, *_ = run(
+        [SimpleNamespace(path=path, original_name=path.name)], {}, tmp_path / "out", lambda p, m: None, None
+    )
+    assert result["total"] == 1

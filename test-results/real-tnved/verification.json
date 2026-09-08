@@ -1,0 +1,45 @@
+{
+  "baseline_rows": 57,
+  "original_empty_codes": 57,
+  "skill_confirmed": 23,
+  "app_before_confirmed": 13,
+  "app_after_confirmed": 17,
+  "unresolved": 40,
+  "reason_categories": {
+    "SHOE_MATERIALS": 8,
+    "UNKNOWN_FIBER": 19,
+    "DENIM_AND_USE": 2,
+    "PROFESSIONAL_USE": 4,
+    "SHOE_CONSTRUCTION": 4,
+    "KNIT_DENSITY_AND_COLLAR": 3
+  },
+  "changed_from_app_before": [
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    54
+  ],
+  "different_from_skill": [
+    18,
+    19,
+    24,
+    25,
+    26,
+    27
+  ],
+  "shoe_confirmed": 0,
+  "shoe_unresolved": 12,
+  "source_sha256": "d72bbd00df20b520b4cea2fe876981a0dd87f6f6931b08f5267b94c921a882d7",
+  "output_sha256": "b6538906102ef0aab143295b09d990bf951fae67b04a01bc42309d92f76a4954",
+  "changed_zip_parts": [
+    "xl/styles.xml",
+    "xl/worksheets/sheet1.xml"
+  ],
+  "ooxml_verified": true,
+  "output_file": "C:\\Users\\Ermolenko.i\\PycharmProjects\\KANZLER_AI\\test-results\\real-tnved\\Артикулы_коллеции_ВЛ_27_Нет_кодов_ТНВЭД_2_с_кодами_ТНВЭД.xlsx"
+}

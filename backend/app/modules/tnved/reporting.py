@@ -1,7 +1,7 @@
 """Patch only target OOXML cells; untouched ZIP members remain byte-identical."""
 
 from copy import deepcopy
-from pathlib import PurePosixPath
+from pathlib import Path, PurePosixPath
 from zipfile import ZipFile
 
 from app.core.exceptions import IntegrityError
@@ -18,6 +18,8 @@ def tag(name):
 
 def patch_workbook(source, destination, edits, added_columns):
     """edits: {sheet: {coordinate: (text, code_as_text)}}."""
+    if Path(source).resolve() == Path(destination).resolve():
+        raise IntegrityError("Исходный Excel нельзя перезаписывать.")
     with ZipFile(source) as zin:
         parts = {i.filename: zin.read(i.filename) for i in zin.infolist()}
         workbook = etree.fromstring(parts["xl/workbook.xml"])
@@ -64,6 +66,8 @@ def patch_workbook(source, destination, edits, added_columns):
                     raise IntegrityError("Нельзя добавлять товарные строки при заполнении кодов.")
                 cells = {c.get("r"): c for c in row}
                 cell = cells.get(coord)
+                if cell is not None and cell.find(tag("f")) is not None:
+                    raise IntegrityError("Нельзя перезаписывать существующую формулу Excel.")
                 new = cell is None
                 if new:
                     cell = etree.Element(tag("c"), r=coord)
@@ -110,6 +114,7 @@ def patch_workbook(source, destination, edits, added_columns):
             )
             changed.add("xl/styles.xml")
         with ZipFile(destination, "w") as zout:
+            zout.comment = zin.comment
             for info in zin.infolist():
                 zout.writestr(info, parts[info.filename])
     # Check the archive actually saved and all non-target parts survived exactly.

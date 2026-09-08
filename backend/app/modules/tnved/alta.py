@@ -33,7 +33,11 @@ class AltaClient:
         if key in self.cache:
             return self.cache[key]
         url = urljoin("https://www.alta.ru", path)
-        if urlparse(url).hostname != "www.alta.ru":
+        if (
+            urlparse(url).hostname != "www.alta.ru"
+            or urlparse(url).scheme != "https"
+            or urlparse(url).port not in (None, 443)
+        ):
             raise SourceUnavailable("Источник кода должен находиться на Alta.ru.")
         for attempt in range(3):
             with self._lock:
@@ -60,6 +64,8 @@ class AltaClient:
         raise SourceUnavailable("Не удалось проверить код на Alta.ru.")
 
     def verify(self, code):
+        if not isinstance(code, str) or not re.fullmatch(r"[0-9]{10}", code):
+            raise SourceUnavailable("Нельзя проверить неполный или некорректный код Alta.")
         html = self.get(f"/tnved/code/{code}/")
         soup = BeautifulSoup(html, "lxml")
         marker = soup.select_one(f'[data-original-code="{code}"]')
@@ -78,7 +84,13 @@ class AltaClient:
                         "description": divs[1].get_text(" ", strip=True),
                     }
                 )
-        if not levels or re.sub(r"\D", "", levels[-1]["code"]) != code:
+        if (
+            len(levels) < 4
+            or re.sub(r"\D", "", levels[-1]["code"]) != code
+            or re.sub(r"\D", "", levels[1]["code"]) != code[:2]
+            or re.sub(r"\D", "", levels[2]["code"]) != code[:4]
+            or any(not level["description"] for level in levels)
+        ):
             raise SourceUnavailable("Не удалось проверить полный код в дереве Alta.ru.")
         return {
             "code": code,
@@ -89,22 +101,98 @@ class AltaClient:
             "sha256": hashlib.sha256(html.encode()).hexdigest(),
         }
 
+    def explanations(self, features, cards):
+        keys = (
+            ["G64"]
+            if features.kind == "обувь"
+            else ["R11"]
+            if cards[0]["code"].startswith(("61", "62"))
+            else []
+        )
+        if features.kind == "джемпер":
+            keys.append("P6110")
+        result = []
+        anchors = {
+            "R11": ("преобладает по массе", "примечания к субпозициям"),
+            "G64": ("подошв", "верх"),
+            "P6110": ("джемпер", "поло"),
+        }
+        for key in keys:
+            path = f"/poyasnenia/{key}/"
+            html = self.get(path)
+            text = BeautifulSoup(html, "lxml").get_text(" ", strip=True).lower().replace("ё", "е")
+            if not all(anchor in text for anchor in anchors[key]):
+                raise SourceUnavailable("Не удалось проверить актуальные пояснения Alta: " + key)
+            result.append(
+                {
+                    "url": "https://www.alta.ru" + path,
+                    "sha256": hashlib.sha256(html.encode()).hexdigest(),
+                    "verified_at": datetime.now(UTC).isoformat(),
+                    "rule": key,
+                }
+            )
+        return result
+
+    def discover_tik(self, features):
+        """Public TIK search is discovery only; never return a verified classification."""
+        query = " ".join(
+            str(value)
+            for value in (
+                features.kind or features.details.get("описание товара", ""),
+                features.gender,
+                "трикотаж" if features.knit is True else "нетрикотажный" if features.knit is False else None,
+                features.main_text,
+            )
+            if value
+        )[:500]
+        html = self.get("/tik/", {"srchstr": query})
+        soup = BeautifulSoup(html, "lxml")
+        codes = set()
+        for anchor in soup.select('a[href*="/tnved/code/"]'):
+            match = re.search(r"/tnved/code/([0-9]{10})/", anchor.get("href", ""))
+            if match:
+                codes.add(match[1])
+        return sorted(codes), {
+            "source": "https://www.alta.ru/tik/",
+            "query": query,
+            "purpose": "DISCOVERY_ONLY",
+            "sha256": hashlib.sha256(html.encode()).hexdigest(),
+        }
+
 
 class CandidateFinder:
     # Search routing only, never final codes. Every leaf is discovered and verified at Alta.
     def __init__(self, client):
         self.client = client
+        self.discovery = []
 
     def headings(self, f):
         male = f.gender == "мужской"
         if f.kind == "обувь":
             return ["6401", "6402", "6403", "6404", "6405"]
+        if f.knit is None and f.kind != "ремень":
+            return []
+        if f.gender is None and f.kind in (
+            "рубашка",
+            "пиджак",
+            "брюки",
+            "джинсы",
+            "шорты",
+            "куртка",
+            "пальто",
+        ):
+            from dataclasses import replace
+
+            return sorted(
+                set(self.headings(replace(f, gender="мужской")) + self.headings(replace(f, gender="женский")))
+            )
         if f.knit:
             return {
                 "футболка": ["6109"],
                 "рубашка": ["6105" if male else "6106"],
                 "джемпер": ["6110"],
                 "брюки": ["6103" if male else "6104"],
+                "джинсы": ["6103" if male else "6104"],
                 "шорты": ["6103" if male else "6104"],
                 "пиджак": ["6103" if male else "6104"],
                 "куртка": ["6101" if male else "6102"],
@@ -128,8 +216,24 @@ class CandidateFinder:
 
     def find(self, features):
         headings = self.headings(features)
+        self.discovery = []
+        if not headings and hasattr(self.client, "discover_tik"):
+            candidates, trace = self.client.discover_tik(features)
+            self.discovery.append(trace)
+            headings = sorted({code[:4] for code in candidates})
+            if len(headings) > 10:
+                raise SourceUnavailable(
+                    "Поиск Alta дал слишком много товарных позиций; уточните вид изделия."
+                )
         if not headings:
             return []
+        self.discovery.append(
+            {
+                "source": "https://www.alta.ru/tnved/",
+                "headings": headings,
+                "purpose": "EXHAUSTIVE_TREE_DISCOVERY",
+            }
+        )
         codes = set()
         for heading in headings:
             html = self.client.get("/tnved/get_tree/", {"tnved": heading})
@@ -152,9 +256,10 @@ class CandidateFinder:
             while queue:
                 node = queue.pop()
                 source, uin = node.get("data-source", ""), node.get("data-uin")
-                if uin in seen:
+                identity = (uin, source)
+                if identity in seen:
                     continue
-                seen.add(uin)
+                seen.add(identity)
                 anchor = node.select_one('a[href*="/tnved/code/"]')
                 if anchor:
                     m = re.search(r"/code/(\d{10})", anchor.get("href", ""))
@@ -165,9 +270,14 @@ class CandidateFinder:
                     queue.extend(children)
                 elif "jstree-closed" in node.get("class", []) and uin:
                     child_html = self.client.get("/tnved/get_tree/", {"uin": uin})
-                    queue.extend(BeautifulSoup(child_html, "lxml").select("li[data-source]"))
+                    child_nodes = BeautifulSoup(child_html, "lxml").select("li[data-source]")
+                    if not child_nodes:
+                        raise SourceUnavailable("Не удалось загрузить все дочерние ветви дерева Alta.")
+                    queue.extend(child_nodes)
                 elif re.fullmatch(r"\d{10}", source) and source.startswith(heading):
                     codes.add(source)
+                elif not anchor:
+                    raise SourceUnavailable("В дереве Alta обнаружена незавершённая ветвь.")
                 if len(seen) > 500:
                     raise SourceUnavailable(
                         "Дерево Alta.ru слишком велико для однозначной автоматической проверки этой позиции."

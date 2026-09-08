@@ -231,7 +231,7 @@ function UploadRun({
   );
 }
 
-function Details({
+export function Details({
   row,
   onClose,
 }: {
@@ -283,6 +283,45 @@ function Details({
                 children: row.features.main_text,
               },
               {
+                key: "age",
+                label: "Возрастная группа",
+                children: format(row.features.age),
+              },
+              {
+                key: "details",
+                label: "Дополнительные признаки",
+                children:
+                  Object.entries(row.features.details || {})
+                    .map(([key, value]) => `${key}: ${String(value)}`)
+                    .join("; ") || "—",
+              },
+              {
+                key: "missing",
+                label: "Недостающие характеристики",
+                children:
+                  (row.missing_input || row.features.missing || []).join(
+                    "; ",
+                  ) || "—",
+              },
+              {
+                key: "rules",
+                label: "Непроверенные правила",
+                children: (row.missing_rule || []).join("; ") || "—",
+              },
+              {
+                key: "confirmation",
+                label: "Основание решения",
+                children:
+                  row.confirmation || row.comment || "Код не подтверждён",
+              },
+              {
+                key: "existing",
+                label: "Проверка исходного кода",
+                children: row.existing_verification
+                  ? `${row.existing_verification.status}: ${row.existing_verification.reason || "см. основание решения"}`
+                  : "—",
+              },
+              {
                 key: "source",
                 label: "Подтверждение Alta",
                 children: row.evidence ? (
@@ -297,9 +336,12 @@ function Details({
           />
           {!!row.candidates?.length && (
             <>
-              <Title level={5}>Кандидаты для уточнения</Title>
+              <Title level={5}>Проверка кандидатов Alta</Title>
               {row.candidates.map((c: DataRow) => (
-                <p key={c.code}>
+                <details key={c.code}>
+                  <summary>
+                    {c.code} — {String(c.verdict).toUpperCase()}
+                  </summary>
                   <a
                     href={`https://www.alta.ru/tnved/code/${c.code}/`}
                     target="_blank"
@@ -308,7 +350,22 @@ function Details({
                     {c.code}
                   </a>{" "}
                   — {c.description}
-                </p>
+                  <p>
+                    {[
+                      ...(c.reasons || []),
+                      ...(c.missing_input || []),
+                      ...(c.missing_rule || []),
+                    ].join("; ")}
+                  </p>
+                  {(c.conditions || []).map(
+                    (condition: DataRow, index: number) => (
+                      <p key={index}>
+                        {String(condition.verdict).toUpperCase()}:{" "}
+                        {condition.condition}
+                      </p>
+                    ),
+                  )}
+                </details>
               ))}
             </>
           )}

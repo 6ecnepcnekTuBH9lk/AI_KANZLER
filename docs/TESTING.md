@@ -1,4 +1,58 @@
-# Проверки проекта — 07.09.2026
+# Проверки проекта
+
+## Итерация ТН ВЭД — 08.09.2026
+
+Полный `pytest -q`: **205 passed**, 93,43 с. В том числе 57 отдельных golden cases
+и все прежние коммерческие regression-тесты. Ruff check и format --check прошли.
+Frontend: **4 tests passed**, lint, typecheck, build прошли. Карточка кандидата
+проверяется отдельным UI-тестом: UNRESOLVED, причина, отсутствие финального кода и ссылка Alta.
+
+Новые тесты: `backend/tests/test_tnved_rules.py`; усиленные Excel-тесты в `test_tnved.py`.
+Положительная классификация обуви проверяется во всех 6401–6405, включая границы 24 см
+и 3 см. Для джемперов проверены 12 петель по двум направлениям и масса 600 г.
+Проверки UNKNOWN, конкурентов, residual siblings, changed wording и missing input
+не позволяют подменить неизвестность совпадением.
+
+Постоянный набор: `backend/tests/fixtures/tnved/baseline.json`, `alta.json`, `expected.json`.
+Baseline содержит исходный XLSX в base64 и SHA256, app_before и предыдущие файлы.
+В `expected.json` зафиксировано подтверждённое пользователем происхождение Skill-файла с 23 кодами.
+Каждое из 57 ожиданий имеет код либо причину, обязательные фрагменты комментария и объяснение.
+Перегенерация ожиданий не выполняется автоматически.
+
+```powershell
+.venv\Scripts\python.exe -X utf8 -m pytest backend/tests/test_tnved.py backend/tests/test_tnved_rules.py -q
+.venv\Scripts\python.exe -X utf8 scripts/inspect_tnved_regression.py
+# После полного pytest, Ruff и frontend-проверок:
+.venv\Scripts\python.exe -X utf8 scripts/run_real_tnved.py
+.venv\Scripts\python.exe -X utf8 scripts/verify_tnved_delivery.py
+```
+
+`inspect_tnved_regression.py` использует snapshots исключительно для разработки и тестов.
+`run_real_tnved.py` использует новую живую сессию Alta, без fixture/cache-кодов.
+`verify_tnved_delivery.py` проверяет все 57 решений, уникальность кандидата,
+SHA256 оригинала/Skill, состав ZIP, неизменность исходных ячеек и стилей,
+формул/строк/merge/filter/freeze/drawings, тип строковых кодов и открытие XLSX;
+создаёт `verification.json`, `differential-57.json`, `skill-comparison-57.md`.
+
+Финальный live-прогон выполнен: **17 CONFIRMED / 40 UNRESOLVED / 0 ошибок Alta**.
+Все 57 строк совпали с expected.json. `verify_tnved_delivery.py` завершился успешно:
+исходный SHA256 сохранён, изменены только целевой worksheet и styles, файл открывается.
+Изменённые строки и отличия от Skill перечислены в [ACCEPTANCE.md](ACCEPTANCE.md).
+
+Дополнительный Excel-тест сохраняет настоящие drawing/image/relationship parts и custom XML
+побайтно; для создания рисунка не нужна дополнительная зависимость Pillow.
+Проверка существующего кода охватывает обычное значение, неопределённую классификацию
+и формулу без cached value: формула остаётся формулой.
+
+Покрытие разделов Skill и статусы IMPLEMENTED / PARTIAL / BLOCKED BY MISSING INPUT /
+BLOCKED BY UNIMPLEMENTED RULE / BLOCKED BY SOURCE — [TNVED_RULES.md](TNVED_RULES.md).
+Необработанная формулировка Alta — ограничение правила, недоступная Alta — ограничение источника;
+их нельзя маскировать общим «недостаточно данных».
+
+Оставшиеся предупреждения не являются падениями: прежние deprecation FastAPI/Starlette,
+чтение расширений коммерческих книг, jsdom getComputedStyle и размер frontend-чанка.
+
+## Предыдущая коммерческая итерация — 07.09.2026
 
 ## Команды
 
